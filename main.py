@@ -1,0 +1,104 @@
+import dash
+import pandas as pd
+from dash import dcc
+from dash import html
+import dash_bootstrap_components as dbc
+import plotly.graph_objs as go
+import plotly.express as px
+from dash.dependencies import Input, Output
+
+from datetime import datetime
+
+app = dash.Dash(__name__, title='Landslides', external_stylesheets=[dbc.themes.DARKLY])
+
+print('###### RESTART #######')
+
+df = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
+
+df_temperature = pd.read_csv("./data/GlobalLandTemperatures/GlobalLandTemperaturesByCity.csv")
+
+app.layout = html.Div(
+    children=[
+        html.H1(
+            children="⛰️ Landslides 🏞️",
+            style={"fontSize": "48px", "color": "#CFCFCF", "textAlign": "center"},
+        ),
+        html.P(
+            children=[
+                "Druids be like. ",
+                html.A("source", href="https://www.youtube.com/watch?v=1S6QTHwYTLI"),
+                "."   
+            ],
+            style={"fontSize": "16px", "color": "white", "text-align": "center"},),
+        html.Div([
+            dbc.Row([
+                dbc.Col([
+                    dcc.DatePickerRange(
+                        id = 'datepickerrange',
+                        start_date=datetime.strptime(df['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        end_date = datetime.strptime(df['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        min_date_allowed=datetime.strptime(df['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        max_date_allowed=datetime.strptime(df['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        display_format='MM/DD/YYYY',
+                        style={'width':'100%'}
+                    ),
+                    html.P(id='output-container-date-picker-range')], width = 3
+                ),
+                dbc.Col([
+                    dcc.Dropdown(id='dropdown', style={"color": "black", 'width':'100%'},options=[{'label': i, 'value': i} for i in df['landslide_category'].dropna().unique()], value='landslide')
+                ], width = 3)
+            ],style={'align':"center"})
+        ]), 
+        dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(autosize=True)), config=dict(responsive=True, displayModeBar=False)),
+    ]
+)
+
+@app.callback(Output('map', 'figure'),
+              Input('dropdown', 'value'),
+              Input('datepickerrange','start_date'),
+              Input('datepickerrange','end_date'))
+              
+def update_figure(selected_value,start_date,end_date):
+    start_date = datetime.strptime(start_date, '%Y-%m-%d') # first transform to date
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
+    start_date = start_date.strftime('%m/%d/%Y %I:%M:%S %p') # then transform it to string again
+    end_date = end_date.strftime('%m/%d/%Y %I:%M:%S %p')
+    data = df[df['event_date'].between(start_date,end_date)]
+    filtered_df = data[data['landslide_category'] == selected_value]
+    filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
+    fig = px.scatter_mapbox(filtered_df, color_discrete_sequence=["red"], lat='latitude', lon='longitude', hover_name='landslide_size', hover_data = {"fatality_count": True, "latitude": False, "longitude": False}, zoom=1, height=800, title=str(selected_value))
+    fig.update_layout(mapbox_style="open-street-map")
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    # fig.update_layout(
+    # mapbox_style="white-bg",
+    # mapbox_layers=[
+    #     {
+    #         "below": 'traces',
+    #         "sourcetype": "raster",
+    #         "sourceattribution": "United States Geological Survey",
+    #         "source": [
+    #             "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
+    #         ]
+    #     },
+    #     {
+    #         "sourcetype": "raster",
+    #         "sourceattribution": "Government of Canada",
+    #         "source": ["https://geo.weather.gc.ca/geomet/?"
+    #                    "SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={bbox-epsg-3857}&CRS=EPSG:3857"
+    #                    "&WIDTH=1000&HEIGHT=1000&LAYERS=RADAR_1KM_RDBR&TILED=true&FORMAT=image/png"],
+    #     }
+    #   ])
+    # fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    return fig
+
+@app.callback(Output('output-container-date-picker-range','children'),
+              Input('datepickerrange','start_date'),
+              Input('datepickerrange','end_date'))
+
+def update_output_datepicker(start_date,end_date):
+    return str(start_date)
+
+
+if __name__ == "__main__":
+    app.run_server(debug=True)
+

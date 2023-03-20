@@ -1,0 +1,8 @@
+
+# Mandatory
+dash >= 2.9.1
+
+# Maybe
+pypsa >= 0.22.1
+
+
