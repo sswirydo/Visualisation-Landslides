@@ -1,6 +1,9 @@
 
 # Mandatory
 dash >= 2.9.1
+pandas >= 1.1.5
+dash_bootstrap_components >= 1.4.1
+rtree >= 0.9.7
 
 # Maybe
 pypsa >= 0.22.1

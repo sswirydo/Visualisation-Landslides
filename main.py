@@ -12,13 +12,13 @@ import preprocess as prep
 from shapely.geometry import Point
 from datetime import datetime
 
-app = dash.Dash(__name__, title='Landslides', external_stylesheets=[dbc.themes.DARKLY])
+app = dash.Dash(__name__, title='Landslides',
+                external_stylesheets=[dbc.themes.DARKLY])
 
 print('###### RESTART #######')
 
-# df_landslide_temperature = prep.get_df() TODO TODO TODO (cf. preprocess.py)
+df_landslide_temperature = prep.get_df()  # TODO TODO TODO (cf. preprocess.py)
 df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
-
 
 
 """
@@ -31,35 +31,42 @@ app.layout = html.Div(
     children=[
         html.H1(
             children="⛰️ Landslides 🏞️",
-            style={"fontSize": "48px", "color": "#CFCFCF", "textAlign": "center"},
+            style={"fontSize": "48px", "color": "#CFCFCF",
+                   "textAlign": "center"},
         ),
         html.P(
             children=[
                 "Druids be like. ",
                 html.A("source", href="https://www.youtube.com/watch?v=1S6QTHwYTLI"),
-                "."   
+                "."
             ],
             style={"fontSize": "16px", "color": "white", "text-align": "center"},),
         html.Div([
             dbc.Row([
                 dbc.Col([
                     dcc.DatePickerRange(
-                        id = 'datepickerrange',
-                        start_date=datetime.strptime(df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        end_date = datetime.strptime(df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        min_date_allowed=datetime.strptime(df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        max_date_allowed=datetime.strptime(df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        id='datepickerrange',
+                        start_date=datetime.strptime(
+                            df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        end_date=datetime.strptime(
+                            df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        min_date_allowed=datetime.strptime(
+                            df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        max_date_allowed=datetime.strptime(
+                            df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
                         display_format='MM/DD/YYYY',
-                        style={'width':'100%'}
+                        style={'width': '100%'}
                     ),
-                    html.P(id='output-container-date-picker-range')], width = 3
+                    html.P(id='output-container-date-picker-range')], width=3
                 ),
                 dbc.Col([
-                    dcc.Dropdown(id='dropdown', style={"color": "black", 'width':'100%'},options=[{'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='landslide')
-                ], width = 3)
-            ],style={'align':"center"})
-        ]), 
-        dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(autosize=True)), config=dict(responsive=True, displayModeBar=False)),
+                    dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
+                                 {'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='landslide')
+                ], width=3)
+            ], style={'align': "center"})
+        ]),
+        dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(
+            autosize=True)), config=dict(responsive=True, displayModeBar=False)),
     ]
 )
 
@@ -70,22 +77,26 @@ app.layout = html.Div(
 ╚══════════════════════╝
 """
 
+
 @app.callback(Output('map', 'figure'),
               Input('dropdown', 'value'),
-              Input('datepickerrange','start_date'),
-              Input('datepickerrange','end_date'))
-              
-def update_figure(selected_value,start_date,end_date):
-    start_date = datetime.strptime(start_date, '%Y-%m-%d') # first transform to date
+              Input('datepickerrange', 'start_date'),
+              Input('datepickerrange', 'end_date'))
+def update_figure(selected_value, start_date, end_date):
+    start_date = datetime.strptime(
+        start_date, '%Y-%m-%d')  # first transform to date
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
-    start_date = start_date.strftime('%m/%d/%Y %I:%M:%S %p') # then transform it to string again
+    # then transform it to string again
+    start_date = start_date.strftime('%m/%d/%Y %I:%M:%S %p')
     end_date = end_date.strftime('%m/%d/%Y %I:%M:%S %p')
-    data = df_landslide[df_landslide['event_date'].between(start_date,end_date)]
+    data = df_landslide[df_landslide['event_date'].between(
+        start_date, end_date)]
     filtered_df = data[data['landslide_category'] == selected_value]
     filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
-    fig = px.scatter_mapbox(filtered_df, color_discrete_sequence=["red"], lat='latitude', lon='longitude', hover_name='landslide_size', hover_data = {"fatality_count": True, "latitude": False, "longitude": False}, zoom=1, height=800, title=str(selected_value))
+    fig = px.scatter_mapbox(filtered_df, color_discrete_sequence=["red"], lat='latitude', lon='longitude', hover_name='landslide_size', hover_data={
+                            "fatality_count": True, "latitude": False, "longitude": False}, zoom=1, height=800, title=str(selected_value))
     fig.update_layout(mapbox_style="open-street-map")
-    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
     # fig.update_layout(
     # mapbox_style="white-bg",
     # mapbox_layers=[
@@ -108,13 +119,12 @@ def update_figure(selected_value,start_date,end_date):
     # fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
     return fig
 
-@app.callback(Output('output-container-date-picker-range','children'),
-              Input('datepickerrange','start_date'),
-              Input('datepickerrange','end_date'))
 
-def update_output_datepicker(start_date,end_date):
+@app.callback(Output('output-container-date-picker-range', 'children'),
+              Input('datepickerrange', 'start_date'),
+              Input('datepickerrange', 'end_date'))
+def update_output_datepicker(start_date, end_date):
     return str(start_date)
-
 
 
 """
