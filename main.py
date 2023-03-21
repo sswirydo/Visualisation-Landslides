@@ -1,21 +1,31 @@
 import dash
 import pandas as pd
+import geopandas as gpd
 from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 import plotly.express as px
 from dash.dependencies import Input, Output
+import preprocess as prep
 
+from shapely.geometry import Point
 from datetime import datetime
 
 app = dash.Dash(__name__, title='Landslides', external_stylesheets=[dbc.themes.DARKLY])
 
 print('###### RESTART #######')
 
-df = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
+# df_landslide_temperature = prep.get_df() TODO TODO TODO (cf. preprocess.py)
+df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
 
-df_temperature = pd.read_csv("./data/GlobalLandTemperatures/GlobalLandTemperaturesByCity.csv")
+
+
+"""
+╔═════════════════════════╗
+║         Dashboard       ║
+╚═════════════════════════╝
+"""
 
 app.layout = html.Div(
     children=[
@@ -35,23 +45,30 @@ app.layout = html.Div(
                 dbc.Col([
                     dcc.DatePickerRange(
                         id = 'datepickerrange',
-                        start_date=datetime.strptime(df['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        end_date = datetime.strptime(df['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        min_date_allowed=datetime.strptime(df['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        max_date_allowed=datetime.strptime(df['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        start_date=datetime.strptime(df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        end_date = datetime.strptime(df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        min_date_allowed=datetime.strptime(df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        max_date_allowed=datetime.strptime(df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
                         display_format='MM/DD/YYYY',
                         style={'width':'100%'}
                     ),
                     html.P(id='output-container-date-picker-range')], width = 3
                 ),
                 dbc.Col([
-                    dcc.Dropdown(id='dropdown', style={"color": "black", 'width':'100%'},options=[{'label': i, 'value': i} for i in df['landslide_category'].dropna().unique()], value='landslide')
+                    dcc.Dropdown(id='dropdown', style={"color": "black", 'width':'100%'},options=[{'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='landslide')
                 ], width = 3)
             ],style={'align':"center"})
         ]), 
         dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(autosize=True)), config=dict(responsive=True, displayModeBar=False)),
     ]
 )
+
+
+"""
+╔══════════════════════╗
+║         Others       ║
+╚══════════════════════╝
+"""
 
 @app.callback(Output('map', 'figure'),
               Input('dropdown', 'value'),
@@ -63,7 +80,7 @@ def update_figure(selected_value,start_date,end_date):
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
     start_date = start_date.strftime('%m/%d/%Y %I:%M:%S %p') # then transform it to string again
     end_date = end_date.strftime('%m/%d/%Y %I:%M:%S %p')
-    data = df[df['event_date'].between(start_date,end_date)]
+    data = df_landslide[df_landslide['event_date'].between(start_date,end_date)]
     filtered_df = data[data['landslide_category'] == selected_value]
     filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
     fig = px.scatter_mapbox(filtered_df, color_discrete_sequence=["red"], lat='latitude', lon='longitude', hover_name='landslide_size', hover_data = {"fatality_count": True, "latitude": False, "longitude": False}, zoom=1, height=800, title=str(selected_value))
@@ -99,6 +116,13 @@ def update_output_datepicker(start_date,end_date):
     return str(start_date)
 
 
+
+"""
+╔════════════════════════╗
+║         Execution      ║
+╚════════════════════════╝
+"""
+
 if __name__ == "__main__":
     app.run_server(debug=True)
-
+    None
