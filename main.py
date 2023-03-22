@@ -6,8 +6,9 @@ from dash import html
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 import plotly.express as px
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import preprocess as prep
+import dash_leaflet as dl
 
 from shapely.geometry import Point
 from datetime import datetime
@@ -17,8 +18,9 @@ app = dash.Dash(__name__, title='Landslides',
 
 print('###### RESTART #######')
 
-# df_landslide_temperature = prep.get_df()  # TODO TODO TODO (cf. preprocess.py)
+# df_landslide = prep.get_df()  # TODO TODO TODO (cf. preprocess.py)
 df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
+# df_landslide["event_date"] = pd.to_datetime(df_landslide["event_date"])
 
 
 """
@@ -27,8 +29,9 @@ df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
 ╚═════════════════════════╝
 """
 
-app.layout = html.Div(
-    children=[
+app.layout = html.Div([
+
+    html.Div(children=[
         html.H1(
             children="⛰️ Landslides 🏞️",
             style={"fontSize": "48px", "color": "#CFCFCF",
@@ -55,10 +58,10 @@ app.layout = html.Div(
                         max_date_allowed=datetime.strptime(
                             df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
                         display_format='MM/DD/YYYY',
-                        style={'width': '100%'}
+                        style={'width': '100%', 'zIndex': 10}
                     ),
                     html.P(id='output-container-date-picker-range'),
-                ], width=3,
+                ], width=5,
                 ),
                 dbc.Col([
                     dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
@@ -66,49 +69,48 @@ app.layout = html.Div(
                 ], width=3)
             ], style={'align': "center"})
         ]),
-        dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(
-            autosize=True)), config=dict(responsive=True, displayModeBar=False)),
-    ]
-)
-'''
-df_test = pd.DataFrame(dict(
-    x = [1, 2, 3, 4],
-    y = [1, 2, 3, 4]
-))
-fig1 = px.line(
-    df_test,
-    x=df_test.x,
-    y=df_test.y,
-    title="Lorem Ipsum"
-)
-#fig1.update_layout()
+        dl.Map([
+            dl.TileLayer(),
+            dl.MarkerClusterGroup(
+                id="markercluster",
+                children=[
+                    dl.Marker(
+                        id = f"marker-{i}",
+                        position=[row["latitude"], row["longitude"]],
+                        children=[dl.Tooltip(row["event_id"])],
+                    )
+                    for i,row in df_landslide.iterrows()
+                ],
+            ),
+        ], style={"width": "100%", "height": "50vh", "margin": "auto", "display": "block"})
+        #dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(
+        #    autosize=True)), config=dict(responsive=True, displayModeBar=False)) 
+        
+    ], style={'padding': 10, 'flex': 1}),
 
-temperature_graph = dcc.Graph(id="regions", figure=fig1)
-popover = dbc.Card(
-    [
-        dbc.Button(
-            "Click to see temperature over the years",
-            id="popover-target",
-            color="dark",
-            className="mr-1",
-            style={"height": "40px"},
-        ),
-        dbc.Popover(
-            [dbc.PopoverBody(region_graph)],
-            id="popover",
-            is_open=False,
-            target="popover-target",
-            placement="auto",
-            style={
-                "width": "100%",
-                "margin-right": "10%",
-                "border-radius": "10px",
-                "box-shadow": "0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)",
-            },
-        ),
-    ]
+    html.Div(children=[
+        # html.Label('Checkboxes'),
+        # dcc.Checklist(['New York City', 'Montréal', 'San Francisco'],
+        #               ['Montréal', 'San Francisco']
+        # ),
+
+        # html.Br(),
+        # html.Label('Text Input'),
+        # dcc.Input(value='MTL', type='text'),
+
+        # html.Br(),
+        # html.Label('Slider'),
+        # dcc.Slider(
+        #     min=datetime.strptime(df_landslide['event_date'].min(),
+        #     max=datetime.strptime(df_landslide['event_date'].max(),
+        #     #marks={i: f'Label {i}' if i == 1 else str(i) for i in range(1, 6)},
+        #     #value=5,
+        # ),
+        html.Img(src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
+    ], style={'padding': 10, 'flex': 1})
+], style={'display': 'flex', 'flex-direction': 'row'}
 )
-'''
+
 
 """
 ╔══════════════════════╗
@@ -116,14 +118,12 @@ popover = dbc.Card(
 ╚══════════════════════╝
 """
 
-
 @app.callback(Output('map', 'figure'),
               Input('dropdown', 'value'),
               Input('datepickerrange', 'start_date'),
               Input('datepickerrange', 'end_date'))
 def update_figure(selected_value, start_date, end_date):
-    start_date = datetime.strptime(
-        start_date, '%Y-%m-%d')  # first transform to date
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')  # first transform to date
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
     # then transform it to string again
     start_date = start_date.strftime('%m/%d/%Y %I:%M:%S %p')
@@ -132,31 +132,19 @@ def update_figure(selected_value, start_date, end_date):
         start_date, end_date)]
     filtered_df = data[data['landslide_category'] == selected_value]
     filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
-    fig = px.scatter_mapbox(filtered_df, color_discrete_sequence=["red"], lat='latitude', lon='longitude', hover_name='landslide_size', hover_data={
-                            "fatality_count": True, "latitude": False, "longitude": False}, zoom=1, height=800, title=str(selected_value))
-    fig.update_layout(mapbox_style="open-street-map")
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    # fig.update_layout(
-    # mapbox_style="white-bg",
-    # mapbox_layers=[
-    #     {
-    #         "below": 'traces',
-    #         "sourcetype": "raster",
-    #         "sourceattribution": "United States Geological Survey",
-    #         "source": [
-    #             "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}"
-    #         ]
-    #     },
-    #     {
-    #         "sourcetype": "raster",
-    #         "sourceattribution": "Government of Canada",
-    #         "source": ["https://geo.weather.gc.ca/geomet/?"
-    #                    "SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX={bbox-epsg-3857}&CRS=EPSG:3857"
-    #                    "&WIDTH=1000&HEIGHT=1000&LAYERS=RADAR_1KM_RDBR&TILED=true&FORMAT=image/png"],
-    #     }
-    #   ])
-    # fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-    return fig
+    # Define the map style and layers
+    tile_layer = dl.TileLayer(url='http://a.tile.openstreetmap.org/{z}/{x}/{y}.png')
+    center = [51.5074, -0.1278]
+    zoom = 10
+    markers = [dl.Marker(position=[row['latitude'], row['longitude']], children=[
+        dl.Tooltip(row['event_id'])
+    ]) for index, row in filtered_df.iterrows()]
+    marker_layer = dl.LayerGroup(children=markers)
+    return dict(
+        center=center,
+        zoom=zoom,
+        children=[tile_layer, marker_layer]
+    )
 
 
 @app.callback(Output('output-container-date-picker-range', 'children'),
