@@ -58,9 +58,6 @@ app.layout = html.Div(
                         style={'width': '100%'}
                     ),
                     html.P(id='output-container-date-picker-range'),
-                    html.Audio(
-                        src='./assets/ara_ara.mp3', controls=True, autoPlay=True, loop=True, style={'width': '100%'})
-
                 ], width=3,
                 ),
                 dbc.Col([
@@ -74,6 +71,18 @@ app.layout = html.Div(
     ]
 )
 '''
+df_test = pd.DataFrame(dict(
+    x = [1, 2, 3, 4],
+    y = [1, 2, 3, 4]
+))
+fig1 = px.line(
+    df_test,
+    x=df_test.x,
+    y=df_test.y,
+    title="Lorem Ipsum"
+)
+#fig1.update_layout()
+
 temperature_graph = dcc.Graph(id="regions", figure=fig1)
 popover = dbc.Card(
     [
