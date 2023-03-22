@@ -69,23 +69,21 @@ app.layout = html.Div([
                 ], width=3)
             ], style={'align': "center"})
         ]),
-        dl.Map([
-            dl.TileLayer(),
-            dl.MarkerClusterGroup(
-                id="markercluster",
-                children=[
-                    dl.Marker(
-                        id = f"marker-{i}",
-                        position=[row["latitude"], row["longitude"]],
-                        children=[dl.Tooltip(row["event_id"])],
-                    )
-                    for i,row in df_landslide.iterrows()
-                ],
-            ),
-        ], style={"width": "100%", "height": "50vh", "margin": "auto", "display": "block"})
-        #dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(
-        #    autosize=True)), config=dict(responsive=True, displayModeBar=False)) 
-        
+        dl.Map(
+            [
+                dl.TileLayer(),
+                dl.MarkerClusterGroup(
+                    id='map'
+                )
+            ],
+            style={'width': '100%', 'height': '50vh',
+                   'margin': "auto", "display": "block"},
+            center=[51.5074, -0.1278],
+            zoom=10,
+        ),
+        # dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(
+        #    autosize=True)), config=dict(responsive=True, displayModeBar=False))
+
     ], style={'padding': 10, 'flex': 1}),
 
     html.Div(children=[
@@ -106,7 +104,8 @@ app.layout = html.Div([
         #     #marks={i: f'Label {i}' if i == 1 else str(i) for i in range(1, 6)},
         #     #value=5,
         # ),
-        html.Img(src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
+        html.Img(
+            src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
     ], style={'padding': 10, 'flex': 1})
 ], style={'display': 'flex', 'flex-direction': 'row'}
 )
@@ -118,12 +117,14 @@ app.layout = html.Div([
 ╚══════════════════════╝
 """
 
-@app.callback(Output('map', 'figure'),
+
+@app.callback(Output('map', 'children'),
               Input('dropdown', 'value'),
               Input('datepickerrange', 'start_date'),
               Input('datepickerrange', 'end_date'))
 def update_figure(selected_value, start_date, end_date):
-    start_date = datetime.strptime(start_date, '%Y-%m-%d')  # first transform to date
+    start_date = datetime.strptime(
+        start_date, '%Y-%m-%d')  # first transform to date
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
     # then transform it to string again
     start_date = start_date.strftime('%m/%d/%Y %I:%M:%S %p')
@@ -132,19 +133,14 @@ def update_figure(selected_value, start_date, end_date):
         start_date, end_date)]
     filtered_df = data[data['landslide_category'] == selected_value]
     filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
-    # Define the map style and layers
-    tile_layer = dl.TileLayer(url='http://a.tile.openstreetmap.org/{z}/{x}/{y}.png')
-    center = [51.5074, -0.1278]
-    zoom = 10
-    markers = [dl.Marker(position=[row['latitude'], row['longitude']], children=[
-        dl.Tooltip(row['event_id'])
-    ]) for index, row in filtered_df.iterrows()]
-    marker_layer = dl.LayerGroup(children=markers)
-    return dict(
-        center=center,
-        zoom=zoom,
-        children=[tile_layer, marker_layer]
-    )
+    markers = [
+        dl.Marker(
+            position=[row['latitude'], row['longitude']],
+            children=dl.Tooltip(row['event_id'])
+        )
+        for i, row in filtered_df.iterrows()
+    ]
+    return markers
 
 
 @app.callback(Output('output-container-date-picker-range', 'children'),
