@@ -17,7 +17,7 @@ app = dash.Dash(__name__, title='Landslides',
 
 print('###### RESTART #######')
 
-df_landslide_temperature = prep.get_df()  # TODO TODO TODO (cf. preprocess.py)
+# df_landslide_temperature = prep.get_df()  # TODO TODO TODO (cf. preprocess.py)
 df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
 
 
@@ -57,7 +57,11 @@ app.layout = html.Div(
                         display_format='MM/DD/YYYY',
                         style={'width': '100%'}
                     ),
-                    html.P(id='output-container-date-picker-range')], width=3
+                    html.P(id='output-container-date-picker-range'),
+                    html.Audio(
+                        src='./assets/ara_ara.mp3', controls=True, autoPlay=True, loop=True, style={'width': '100%'})
+
+                ], width=3,
                 ),
                 dbc.Col([
                     dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
@@ -69,7 +73,33 @@ app.layout = html.Div(
             autosize=True)), config=dict(responsive=True, displayModeBar=False)),
     ]
 )
-
+'''
+temperature_graph = dcc.Graph(id="regions", figure=fig1)
+popover = dbc.Card(
+    [
+        dbc.Button(
+            "Click to see temperature over the years",
+            id="popover-target",
+            color="dark",
+            className="mr-1",
+            style={"height": "40px"},
+        ),
+        dbc.Popover(
+            [dbc.PopoverBody(region_graph)],
+            id="popover",
+            is_open=False,
+            target="popover-target",
+            placement="auto",
+            style={
+                "width": "100%",
+                "margin-right": "10%",
+                "border-radius": "10px",
+                "box-shadow": "0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)",
+            },
+        ),
+    ]
+)
+'''
 
 """
 ╔══════════════════════╗
