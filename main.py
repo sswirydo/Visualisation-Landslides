@@ -136,7 +136,8 @@ def update_figure(selected_value, start_date, end_date):
     markers = [
         dl.Marker(
             position=[row['latitude'], row['longitude']],
-            children=dl.Tooltip(row['event_id'])
+            children=dl.Tooltip(
+                html.Div([row['event_id'], html.P(html.Img(src=row['photo_link']))]))
         )
         for i, row in filtered_df.iterrows()
     ]
