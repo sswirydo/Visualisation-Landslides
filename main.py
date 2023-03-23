@@ -179,12 +179,12 @@ def update_output_datepicker(start_date, end_date):
 def marker_click(args):
     if not any(args):
         print('no args')
-        return None
+        return []
     value = dash.callback_context.triggered[0]['value']
     marker_id = json.loads(
         dash.callback_context.triggered[0]['prop_id'].split(".")[0])["index"]
     print(marker_id)
-    return None
+    return []
 
 
 """
