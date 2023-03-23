@@ -137,16 +137,23 @@ def update_figure(selected_value, start_date, end_date):
         dl.Marker(
             position=[row['latitude'], row['longitude']],
             children=dl.Tooltip(
-                html.Div([row['event_id'], html.P(html.Img(src=row['photo_link']))]))
+                html.Div([
+                    html.Img(src=row['photo_link'], style={
+                             "width": "50px", "height": "50px"}),
+                    html.H3(row['event_title'], style={
+                            "color": "darkblue", "overflow-wrap": "break-word"}),
+                    html.P(row['event_description'],),
+                    html.P(row['source_name']),
+                ], style={'width': '100px', 'white-space': 'normal'}))
         )
         for i, row in filtered_df.iterrows()
     ]
     return markers
 
 
-@app.callback(Output('output-container-date-picker-range', 'children'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'))
+@ app.callback(Output('output-container-date-picker-range', 'children'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'))
 def update_output_datepicker(start_date, end_date):
     return str(start_date)
 
