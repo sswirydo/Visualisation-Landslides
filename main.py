@@ -1,6 +1,5 @@
 import dash
 import pandas as pd
-import geopandas as gpd
 from dash import dcc
 from dash import html
 import dash_bootstrap_components as dbc
@@ -10,7 +9,7 @@ from dash.dependencies import Input, Output, State
 import preprocess as prep
 import dash_leaflet as dl
 
-from shapely.geometry import Point
+#from shapely.geometry import Point
 from datetime import datetime
 
 app = dash.Dash(__name__, title='Landslides',
