@@ -5,9 +5,10 @@ from dash import html
 import dash_bootstrap_components as dbc
 import plotly.graph_objs as go
 import plotly.express as px
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output, State, ALL
 import preprocess as prep
 import dash_leaflet as dl
+from dash.exceptions import PreventUpdate
 
 #from shapely.geometry import Point
 from datetime import datetime
@@ -69,16 +70,18 @@ app.layout = html.Div([
             ], style={'align': "center"})
         ]),
         dl.Map(
-            [
+            children=[
                 dl.TileLayer(),
                 dl.MarkerClusterGroup(
-                    id='map'
+                    html.Div(id='placeholder', hidden=True),
+                    id='markers'
                 )
             ],
             style={'width': '100%', 'height': '50vh',
                    'margin': "auto", "display": "block"},
             center=[51.5074, -0.1278],
             zoom=10,
+            id='map'
         ),
         # dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(
         #    autosize=True)), config=dict(responsive=True, displayModeBar=False))
@@ -117,7 +120,7 @@ app.layout = html.Div([
 """
 
 
-@app.callback(Output('map', 'children'),
+@app.callback(Output('markers', 'children'),
               Input('dropdown', 'value'),
               Input('datepickerrange', 'start_date'),
               Input('datepickerrange', 'end_date'))
@@ -134,19 +137,33 @@ def update_figure(selected_value, start_date, end_date):
     filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
     markers = [
         dl.Marker(
+            id={'type': 'marker', 'index': str(row['event_id'])},
             position=[row['latitude'], row['longitude']],
-            children=dl.Tooltip(
-                html.Div([
-                    html.Img(src=row['photo_link'], style={
-                             "width": "50px", "height": "50px"}),
-                    html.H3(row['event_title'], style={
-                            "color": "darkblue", "overflow-wrap": "break-word"}),
-                    html.P(row['event_description'],),
-                    html.P(row['source_name']),
-                ], style={'width': '100px', 'white-space': 'normal'}))
+            children=[
+                dl.Tooltip(
+                    html.Div([
+                        html.Img(src=row['photo_link'], style={
+                            "width": "50px", "height": "50px"}),
+                        html.H3(row['event_title'], style={
+                                "color": "darkblue", "overflow-wrap": "break-word"}),
+                        html.P(row['event_description'],),
+                        html.P(row['source_name']),
+                    ], style={'width': '300px', 'white-space': 'normal'})),
+
+                dl.Popup(
+                    html.Div([
+                        html.Img(src=row['photo_link'], style={
+                            "width": "50px", "height": "50px"}),
+                        html.H3(row['event_title'], style={
+                                "color": "darkblue", "overflow-wrap": "break-word"}),
+                        html.P(row['event_description'],),
+                        html.P(row['source_name']),
+                    ], style={'width': '300px', 'white-space': 'normal'}))
+            ]
         )
         for i, row in filtered_df.iterrows()
     ]
+    print(markers[0], markers[1])
     return markers
 
 
@@ -155,6 +172,19 @@ def update_figure(selected_value, start_date, end_date):
                Input('datepickerrange', 'end_date'))
 def update_output_datepicker(start_date, end_date):
     return str(start_date)
+
+
+@ app.callback(Output("placeholder", "children"),
+               [Input({'type': 'marker', 'index': ALL}, 'n_clicks')])
+def marker_click(args):
+    if not any(args):
+        print('no args')
+        return None
+    value = dash.callback_context.triggered[0]['value']
+    marker_id = json.loads(
+        dash.callback_context.triggered[0]['prop_id'].split(".")[0])["index"]
+    print(marker_id)
+    return None
 
 
 """
