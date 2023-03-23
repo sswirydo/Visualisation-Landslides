@@ -1,7 +1,0 @@
-name: Landslides-Project
-channels:
-  - conda-forge
-dependencies:
-  - dash >= 2.9.1
-  - pypsa >= 0.22.1
-  - dash-boostrap-components
