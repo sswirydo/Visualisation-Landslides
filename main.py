@@ -11,6 +11,8 @@ from dash import html
 from dash import dcc
 import dash
 import pandas as pd
+import urllib.parse
+
 
 app = dash.Dash(__name__, title='Landslides',
                 external_stylesheets=[dbc.themes.DARKLY])
@@ -193,7 +195,8 @@ def update_tweet_text(clicked_marker_idx):
 @app.callback(Output('twitter-share-button', 'href'),
               Input('tweet-text', 'value'))
 def update_twitter_share_button(tweet_text):
-    tweet_url = "https://twitter.com/intent/tweet?text=urllib.parse.quote(tweet_text)"
+    tweet_url = "https://twitter.com/intent/tweet?text=" + \
+        urllib.parse.quote(tweet_text)
     return tweet_url
 
 
