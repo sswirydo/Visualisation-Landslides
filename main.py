@@ -177,6 +177,8 @@ app.layout = dbc.Container([
 })
 
 
+# TODO MAKE THEM ALL USE THE global_filtered_df VARIABLE
+
 global_filtered_df = None
 
 
