@@ -1,17 +1,21 @@
-import dash
+
 import pandas as pd
+
+import dash
 from dash import dcc
 from dash import html
-import dash_bootstrap_components as dbc
-import plotly.graph_objs as go
-import plotly.express as px
-from dash.dependencies import Input, Output, State, ALL
-import preprocess as prep
 import dash_leaflet as dl
+import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
 
-#from shapely.geometry import Point
+import plotly.graph_objs as go
+import plotly.express as px
+import preprocess as prep
+
 from datetime import datetime
+
+import tweepy 
 
 app = dash.Dash(__name__, title='Landslides',
                 external_stylesheets=[dbc.themes.DARKLY])
@@ -32,19 +36,19 @@ df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
 app.layout = html.Div([
 
     html.Div(children=[
-        html.H1(
+        html.H1(    # Title
             children="⛰️ Landslides 🏞️",
             style={"fontSize": "48px", "color": "#CFCFCF",
                    "textAlign": "center"},
         ),
-        html.P(
+        html.P(     # Subtitle
             children=[
                 "Druids be like. ",
                 html.A("source", href="https://www.youtube.com/watch?v=1S6QTHwYTLI"),
                 "."
             ],
             style={"fontSize": "16px", "color": "white", "text-align": "center"},),
-        html.Div([
+        html.Div([  # Date picker
             dbc.Row([
                 dbc.Col([
                     dcc.DatePickerRange(
@@ -65,11 +69,11 @@ app.layout = html.Div([
                 ),
                 dbc.Col([
                     dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
-                                 {'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='landslide')
+                                 {'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='rock_fall')
                 ], width=3)
             ], style={'align': "center"})
         ]),
-        dl.Map(
+        dl.Map(     # Map
             children=[
                 dl.TileLayer(),
                 dl.MarkerClusterGroup(
@@ -80,6 +84,12 @@ app.layout = html.Div([
             style={'width': '100%', 'height': '50vh',
                    'margin': "auto", "display": "block"},
             center=[51.5074, -0.1278],
+
+            # Permet de limiter la carte infinie à juste 1x le monde
+            bounds=[[-90, -180], [90, 180]],
+            maxBounds=[[-90, -180], [90, 180]],
+            maxBoundsViscosity=1.0,
+
             zoom=10,
             id='map'
         ),
@@ -88,7 +98,7 @@ app.layout = html.Div([
 
     ], style={'padding': 10, 'flex': 1}),
 
-    html.Div(children=[
+    html.Div(children=[ # Right side
         # html.Label('Checkboxes'),
         # dcc.Checklist(['New York City', 'Montréal', 'San Francisco'],
         #               ['Montréal', 'San Francisco']
@@ -106,10 +116,28 @@ app.layout = html.Div([
         #     #marks={i: f'Label {i}' if i == 1 else str(i) for i in range(1, 6)},
         #     #value=5,
         # ),
-        html.Img(
+
+        dcc.Input(
+            id='tweet-text',
+            type='text',
+            placeholder='Enter your tweet here',
+            value='[message] #landslides #druids #Info-Vis'
+        ),
+
+        # Define the layout for the Twitter share button
+        dcc.Link(
+            'Share on Twitter 🐦',
+            id='twitter-share-button',
+            href='https://youtu.be/dQw4w9WgXcQ',
+            target='_blank'
+
+        ),
+
+
+        html.Img( # Image
             src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
     ], style={'padding': 10, 'flex': 1})
-], style={'display': 'flex', 'flex-direction': 'row'}
+], style={'backgroundColor':'#66c572','display': 'flex', 'flex-direction': 'row'}
 )
 
 
