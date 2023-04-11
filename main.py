@@ -12,8 +12,6 @@ from dash import dcc
 import dash
 import pandas as pd
 
-2
-
 
 app = dash.Dash(__name__, title='Landslides',
                 external_stylesheets=[dbc.themes.DARKLY])
@@ -82,7 +80,8 @@ app.layout = html.Div([
                     html.Div(id='placeholder', hidden=True),
                     id='markers'
                 ),
-                html.Div(id='clicked-marker-index', hidden=True)
+                html.Div(id='clicked-marker-index', hidden=True),
+                html.Div(id='prev-marker-clicks', hidden=True, children=[0]*len(df_landslide))
             ],
             style={'width': '100%', 'height': '50vh',
                    'margin': "auto", "display": "block"},
@@ -153,16 +152,19 @@ app.layout = html.Div([
 """
 
 
+global_filtered_df = None
+
 @app.callback(Output('markers', 'children'),
               Input('dropdown', 'value'),
               Input('datepickerrange', 'start_date'),
               Input('datepickerrange', 'end_date'))
 def update_figure(selected_value, start_date, end_date):
+    global global_filtered_df
     data = df_landslide[df_landslide['event_date'].between(
         pd.Timestamp(start_date), pd.Timestamp(end_date))]
 
-    filtered_df = data[data['landslide_category'] == selected_value]
-    filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
+    global_filtered_df = data[data['landslide_category'] == selected_value]
+    global_filtered_df['fatality_count'] = global_filtered_df['fatality_count'].fillna(0)
     markers = [
         dl.Marker(
             id={"type": "marker", "index": i},
@@ -189,7 +191,7 @@ def update_figure(selected_value, start_date, end_date):
                     ], style={'width': '300px', 'white-space': 'normal'})),
             ]
         )
-        for i, row in filtered_df.iterrows()
+        for i, row in global_filtered_df.iterrows()
     ]
     print(markers[0])
     return markers
@@ -202,31 +204,50 @@ def update_output_datepicker(start_date, end_date):
     return str(start_date)
 
 
-@app.callback(Output("clicked-marker-index", "children"),
-              [Input({'type': 'marker', 'index': ALL}, 'n_clicks')],
-              [State({'type': 'marker', 'index': ALL}, 'position')])
-def marker_click(*args_position_n_clicks):
-    args = args_position_n_clicks[0]  # n_clicks arguments
-    positions = args_position_n_clicks[1]  # position arguments
-    clicked_marker_idx = next((i for i, n in enumerate(args) if n), None)
+# @app.callback(Output("clicked-marker-index", "children"), [Input("map", "click_feature")])
+# def capital_click(feature):
+#     if feature is not None:
+#         return f"You clicked {feature['properties']['name']}"
+
+
+@app.callback(
+    Output("clicked-marker-index", "children"),
+    Input({"type": "marker", "index": ALL}, "n_clicks"),
+    State({"type": "marker", "index": ALL}, "position"),
+    State("prev-marker-clicks", "children")
+)
+def marker_click(n_clicks, positions, prev_marker_clicks):
+    if not any(n_clicks):  # No marker has been clicked
+        raise PreventUpdate
+
+    clicked_marker_idx = None
+    for i, (prev, curr) in enumerate(zip(prev_marker_clicks, n_clicks)):
+        if prev != curr:
+            clicked_marker_idx = i
+            break
+
+    prev_marker_clicks[clicked_marker_idx] = n_clicks[clicked_marker_idx]
+
     if clicked_marker_idx is not None:
         clicked_position = positions[clicked_marker_idx]
-        print(f"Clicked marker: position={clicked_position}")
+        print(f"Clicked marker: position={clicked_position}, index={clicked_marker_idx}")
         return clicked_marker_idx
 
     return dash.no_update
 
 
+
+#TODO FIX MARKER COUNTER UPDATE
+
 @app.callback(Output('tweet-text', 'value'),
               Input('clicked-marker-index', 'children'))
 def update_tweet_text(clicked_marker_idx):
-    if clicked_marker_idx is not None:
-        clicked_row = df_landslide.iloc[clicked_marker_idx]
+    if clicked_marker_idx is not None and global_filtered_df is not None:
+        clicked_row = global_filtered_df.iloc[clicked_marker_idx]
         tweet_text = f"{clicked_row['event_title']} at {clicked_row['latitude']}, {clicked_row['longitude']} #landslides #druids #Info-Vis"
         return tweet_text
     else:
         return "[message] #landslides #druids #Info-Vis"
-
 
 """
 ╔════════════════════════╗
