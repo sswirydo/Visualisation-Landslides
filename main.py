@@ -3,8 +3,8 @@ import urllib.parse
 
 import dash
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_leaflet as dl
 import pandas as pd
 import plotly.express as px
@@ -144,7 +144,12 @@ app.layout = dbc.Container([
             ]),
         ], width=4),
     ]),
-], fluid=True, style={'backgroundColor': '#66c572'})
+], fluid=True, style={
+    'background-image': 'url(https://thumbs.gfycat.com/WhiteOptimisticGrackle-mobile.mp4)',
+    'background-repeat': 'no-repeat',
+    'background-position': 'center',
+    'background-size': 'cover'
+})
 
 
 global_filtered_df = None
@@ -198,8 +203,6 @@ def update_figure(selected_value, start_date, end_date, selected_triggers, selec
         )
         for i, row in global_filtered_df.iterrows()
     ]
-
-    print(markers[0])
     return markers
 
 
