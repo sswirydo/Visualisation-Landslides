@@ -23,7 +23,7 @@ print('###### RESTART #######')
 df_landslide = pd.read_csv(
     './data/Global_Landslide_Catalog_Export.csv', parse_dates=['event_date'])
 
-app.layout = html.Div([
+app.layout = dbc.Container([
     html.Div(children=[
         html.H1(    # Title
             children="⛰️ Landslides 🏞️",
@@ -37,7 +37,9 @@ app.layout = html.Div([
                 "."
             ],
             style={"fontSize": "16px", "color": "white", "text-align": "center"},),
-        html.Div([  # Date picker
+    ]),
+    dbc.Row([
+        dbc.Col([  # Data selection (left)
             dbc.Row([
                 dbc.Col([
                     dcc.DatePickerRange(
@@ -52,67 +54,75 @@ app.layout = html.Div([
                         style={'width': '100%', 'zIndex': 10}
                     ),
                     html.P(id='output-container-date-picker-range'),
-                ], width=5,
+                ], width=12,
                 ),
                 dbc.Col([
                     dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
                                  {'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='rock_fall')
-                ], width=3)
-            ], style={'align': "center"})
-        ]),
-        dl.Map(     # Map
-            children=[
-                dl.TileLayer(),
-                dl.MarkerClusterGroup(
-                    html.Div(id='placeholder', hidden=True),
-                    id='markers'
+                ], width=12)
+            ]),
+        ], width=3),
+        dbc.Col([  # Plots (middle)
+            dcc.Loading(     # Bar chart
+                id="loading-icon",
+                type="circle",
+                children=[dcc.Graph(id='bar-chart')],
+                style={'textAlign': 'center'}
+            ),
+        ], width=6),
+        dbc.Col([  # Map (right)
+            dl.Map(     # Map
+                children=[
+                    dl.TileLayer(),
+                    dl.MarkerClusterGroup(
+                        html.Div(id='placeholder', hidden=True),
+                        id='markers'
+                    ),
+                    html.Div(id='clicked-marker-index', hidden=True),
+                    html.Div(id='prev-marker-clicks', hidden=True,
+                             children=[0]*len(df_landslide))
+                ],
+                style={'width': '100%', 'height': '50vh',
+                       'margin': "auto", "display": "block"},
+                center=[51.5074, -0.1278],
+                bounds=[[-90, -180], [90, 180]],
+                maxBounds=[[-90, -180], [90, 180]],
+                maxBoundsViscosity=1.0,
+                zoom=10,
+                id='map'
+            ),
+        ], width=3),
+        dbc.Col([
+            html.Div(children=[  # Tweet input and share button
+                dcc.Input(
+                    id='tweet-text',
+                    type='text',
+                    placeholder='Enter your tweet here',
+                    value='[message] #landslides #druids #Info-Vis',
+                    style={'width': '100%', 'zIndex': 10}
                 ),
-                html.Div(id='clicked-marker-index', hidden=True),
-                html.Div(id='prev-marker-clicks', hidden=True,
-                         children=[0]*len(df_landslide))
-            ],
-            style={'width': '100%', 'height': '50vh',
-                   'margin': "auto", "display": "block"},
-            center=[51.5074, -0.1278],
-            bounds=[[-90, -180], [90, 180]],
-            maxBounds=[[-90, -180], [90, 180]],
-            maxBoundsViscosity=1.0,
-            zoom=10,
-            id='map'
-        ),
-    ], style={'padding': 10, 'flex': 1}),
 
-    html.Div(children=[  # Right side
-        dcc.Input(
-            id='tweet-text',
-            type='text',
-            placeholder='Enter your tweet here',
-            value='[message] #landslides #druids #Info-Vis',
-            style={'width': '100%', 'zIndex': 10}
+                dcc.Link(
+                    'Share on Twitter 🐦',
+                    id='twitter-share-button',
+                    href='https://youtu.be/dQw4w9WgXcQ',
+                    target='_blank',
+                    style={'color': 'white', 'text-decoration': 'none',
+                           'font-size': '20px', 'padding': '10px'},
+                ),
+            ]),
+        ], width=4),
+    ]),
+], fluid=True, style={'backgroundColor': '#66c572'})
 
-        ),
-
-        dcc.Link(
-            'Share on Twitter 🐦',
-            id='twitter-share-button',
-            href='https://youtu.be/dQw4w9WgXcQ',
-            target='_blank',
-            style={'color': 'white', 'text-decoration': 'none',
-                   'font-size': '20px', 'padding': '10px'},
-        ),
-
-        dcc.Graph(id='bar-chart'),
-    ], style={'padding': 10, 'flex': 1})
-], style={'backgroundColor': '#66c572', 'display': 'flex', 'flex-direction': 'row'}
-)
 
 global_filtered_df = None
 
 
-@app.callback(Output('markers', 'children'),
-              Input('dropdown', 'value'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'))
+@ app.callback(Output('markers', 'children'),
+               Input('dropdown', 'value'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'))
 def update_figure(selected_value, start_date, end_date):
     global global_filtered_df
     data = df_landslide[df_landslide['event_date'].between(
@@ -152,17 +162,17 @@ def update_figure(selected_value, start_date, end_date):
     return markers
 
 
-@app.callback(Output('output-container-date-picker-range', 'children'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'))
+@ app.callback(Output('output-container-date-picker-range', 'children'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'))
 def update_output_datepicker(start_date, end_date):
     return str(start_date)
 
 
-@app.callback([Output("clicked-marker-index", "children"),
+@ app.callback([Output("clicked-marker-index", "children"),
                Output('prev-marker-clicks', 'children')],
-              [Input({'type': 'marker', 'index': ALL}, 'n_clicks')],
-              [State({'type': 'marker', 'index': ALL}, 'position'),
+               [Input({'type': 'marker', 'index': ALL}, 'n_clicks')],
+               [State({'type': 'marker', 'index': ALL}, 'position'),
                State('prev-marker-clicks', 'children')])
 def marker_click(n_clicks, positions, prev_clicks):
     clicked_marker_idx = None
@@ -180,8 +190,8 @@ def marker_click(n_clicks, positions, prev_clicks):
     return dash.no_update, prev_clicks
 
 
-@app.callback(Output('tweet-text', 'value'),
-              Input('clicked-marker-index', 'children'))
+@ app.callback(Output('tweet-text', 'value'),
+               Input('clicked-marker-index', 'children'))
 def update_tweet_text(clicked_marker_idx):
     if clicked_marker_idx is None:
         raise PreventUpdate
@@ -195,8 +205,8 @@ def update_tweet_text(clicked_marker_idx):
     return tweet
 
 
-@app.callback(Output('twitter-share-button', 'href'),
-              Input('tweet-text', 'value'))
+@ app.callback(Output('twitter-share-button', 'href'),
+               Input('tweet-text', 'value'))
 def update_twitter_share_button(tweet_text):
     tweet_url = "https://twitter.com/intent/tweet?text=" + \
         urllib.parse.quote(tweet_text)
@@ -205,10 +215,10 @@ def update_twitter_share_button(tweet_text):
 # Add a callback to update the bar chart
 
 
-@app.callback(Output('bar-chart', 'figure'),
-              Input('dropdown', 'value'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'))
+@ app.callback(Output('bar-chart', 'figure'),
+               Input('dropdown', 'value'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'))
 def update_bar_chart(selected_value, start_date, end_date):
     data = df_landslide[df_landslide['event_date'].between(
         pd.Timestamp(start_date), pd.Timestamp(end_date))]
