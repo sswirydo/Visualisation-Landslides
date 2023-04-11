@@ -14,7 +14,8 @@ from dash.exceptions import PreventUpdate
 
 
 app = dash.Dash(__name__, title='Landslides',
-                external_stylesheets=[dbc.themes.DARKLY])
+                external_stylesheets=[dbc.themes.DARKLY, './styles.css'])
+
 
 print('###### RESTART #######')
 
@@ -25,8 +26,7 @@ app.layout = dbc.Container([
     html.Div(children=[
         html.H1(    # Title
             children="⛰️ Landslides 🏞️",
-            style={"fontSize": "48px", "color": "#CFCFCF",
-                   "textAlign": "center"},
+            className="title"
         ),
         html.P(     # Subtitle
             children=[
@@ -37,51 +37,76 @@ app.layout = dbc.Container([
             style={"fontSize": "16px", "color": "white", "text-align": "center"},),
     ]),
     dbc.Row([
-        dbc.Col([  # Data selection (left)
-            dbc.Row([
-                dbc.Col([
-                    dcc.DatePickerRange(
-                        id='datepickerrange',
-                        start_date=df_landslide['event_date'].min().date(),
-                        end_date=df_landslide['event_date'].max().date(),
-                        min_date_allowed=df_landslide['event_date'].min(
-                        ).date(),
-                        max_date_allowed=df_landslide['event_date'].max(
-                        ).date(),
-                        display_format='MM/DD/YYYY',
-                        style={'width': '100%', 'zIndex': 10}
-                    ),
-                    html.P(id='output-container-date-picker-range'),
-                ], width=12,
-                ),
-                dbc.Col([
-                    dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
-                                 {'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='rock_fall')
-                ], width=12)
-            ]),
-            # Landslide trigger selector
-            dbc.Col([
-                dcc.Dropdown(id='trigger-dropdown',
-                             style={"color": "black", 'width': '100%'},
-                    options=[{'label': i, 'value': i}
-                                 for i in df_landslide['landslide_trigger'].dropna().unique()],
-                             value=None,
-                             multi=True,
-                             placeholder="Select Landslide Triggers")
-            ], width=12),
-
-            # Landslide size selector
-            dbc.Col([
-                dcc.Dropdown(id='size-dropdown',
-                             style={"color": "black", 'width': '100%'},
-                    options=[{'label': i, 'value': i}
-                                 for i in df_landslide['landslide_size'].dropna().unique()],
-                             value=None,
-                             multi=True,
-                             placeholder="Select Landslide Sizes")
-            ], width=12),
-
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader("Data Filters"),
+                dbc.CardBody([
+                    # Date Picker
+                    dbc.Row([
+                        dbc.Label("Date Range", className="control-label"),
+                    ]),
+                    dbc.Row([
+                        dcc.DatePickerRange(
+                            id='datepickerrange',
+                            start_date=df_landslide['event_date'].min().date(),
+                            end_date=df_landslide['event_date'].max().date(),
+                            min_date_allowed=df_landslide['event_date'].min(
+                            ).date(),
+                            max_date_allowed=df_landslide['event_date'].max(
+                            ).date(),
+                            display_format='MM/DD/YYYY',
+                            style={'width': '100%', 'zIndex': 10},
+                            className='datepicker'
+                        ),
+                    ], className="mb-3"),
+                    # Landslide Category Dropdown
+                    dbc.Row([
+                        dbc.Label("Landslide Category",
+                                  className="control-label"),
+                    ]),
+                    dbc.Row([
+                        dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
+                            {'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='rock_fall')
+                    ], className="mb-3"),
+                    # Landslide Trigger Dropdown
+                    dbc.Row([
+                        dbc.Label("Landslide Triggers",
+                                  className="control-label"),
+                    ]),
+                    dbc.Row([
+                        dcc.Dropdown(
+                            id='trigger-dropdown',
+                            options=[{'label': i, 'value': i}
+                                     for i in df_landslide['landslide_trigger'].dropna().unique()],
+                            value=None,
+                            multi=True,
+                            placeholder="Select Landslide Triggers",
+                            className="dropdown",
+                            style={"color": "black", 'width': '100%'},
+                        ),
+                    ], className="mb-3"),
+                    # Landslide Size Dropdown
+                    dbc.Row([
+                        dbc.Label("Landslide Sizes",
+                                  className="control-label"),
+                    ]),
+                    dbc.Row([
+                        dcc.Dropdown(
+                            id='size-dropdown',
+                            options=[{'label': i, 'value': i}
+                                     for i in df_landslide['landslide_size'].dropna().unique()],
+                            value=None,
+                            multi=True,
+                            placeholder="Select Landslide Sizes",
+                            className="dropdown",
+                            style={"color": "black", 'width': '100%'},
+                        ),
+                    ], className="mb-3"),
+                ]),
+            ], className="mb-4"),
         ], width=3),
+
+
         dbc.Col([  # Plots (middle)
             dcc.Loading(     # Bar chart
                 id="loading-icon",
@@ -204,13 +229,6 @@ def update_figure(selected_value, start_date, end_date, selected_triggers, selec
         for i, row in global_filtered_df.iterrows()
     ]
     return markers
-
-
-@ app.callback(Output('output-container-date-picker-range', 'children'),
-               Input('datepickerrange', 'start_date'),
-               Input('datepickerrange', 'end_date'))
-def update_output_datepicker(start_date, end_date):
-    return str(start_date)
 
 
 @ app.callback([Output("clicked-marker-index", "children"),
