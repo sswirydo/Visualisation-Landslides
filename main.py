@@ -169,8 +169,8 @@ app.layout = dbc.Container([
             ]),
         ], width=4),
     ]),
-], fluid=True, style={
-    'background-image': 'url(https://thumbs.gfycat.com/WhiteOptimisticGrackle-mobile.mp4)',
+],  fluid=True, style={
+    'background-image': 'url(https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80)',
     'background-repeat': 'no-repeat',
     'background-position': 'center',
     'background-size': 'cover'
