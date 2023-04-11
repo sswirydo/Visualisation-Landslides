@@ -1,18 +1,16 @@
-import tweepy
 import datetime
-import preprocess as prep
-import plotly.express as px
-import plotly.graph_objs as go
-from dash.exceptions import PreventUpdate
-from dash.dependencies import Input, Output, State, ALL
-import dash_bootstrap_components as dbc
-import dash_leaflet as dl
-from dash import html
-from dash import dcc
-import dash
-import pandas as pd
 import urllib.parse
+
+import dash
+import dash_bootstrap_components as dbc
+import dash_core_components as dcc
+import dash_html_components as html
+import dash_leaflet as dl
+import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
+from dash.dependencies import Input, Output, State, ALL
+from dash.exceptions import PreventUpdate
 
 
 app = dash.Dash(__name__, title='Landslides',
@@ -90,8 +88,7 @@ app.layout = dbc.Container([
                 type="circle",
                 children=[dcc.Graph(id='bar-chart')],
                 style={'textAlign': 'center'}
-            ),
-            dcc.Loading(     # Pie chart
+            ),            dcc.Loading(     # Pie chart
                 id="loading-icon-pie",
                 type="circle",
                 children=[dcc.Graph(id='pie-chart')],
@@ -103,8 +100,6 @@ app.layout = dbc.Container([
                 children=[dcc.Graph(id='histogram')],
                 style={'textAlign': 'center'}
             ),
-
-
         ], width=6),
         dbc.Col([  # Map (right)
             dl.Map(     # Map
@@ -155,12 +150,12 @@ app.layout = dbc.Container([
 global_filtered_df = None
 
 
-@app.callback(Output('markers', 'children'),
-              Input('dropdown', 'value'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'),
-              Input('trigger-dropdown', 'value'),
-              Input('size-dropdown', 'value'))
+@ app.callback(Output('markers', 'children'),
+               Input('dropdown', 'value'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'),
+               Input('trigger-dropdown', 'value'),
+               Input('size-dropdown', 'value'))
 def update_figure(selected_value, start_date, end_date, selected_triggers, selected_sizes):
     global global_filtered_df
     data = df_landslide[df_landslide['event_date'].between(
@@ -185,29 +180,25 @@ def update_figure(selected_value, start_date, end_date, selected_triggers, selec
             id={"type": "marker", "index": i},
             position=[row['latitude'], row['longitude']],
             children=[
-                dl.Tooltip(
-                    html.Div([
-                        html.H3(row['event_title'], style={
-                                "color": "darkblue", "overflow-wrap": "break-word"}),
-                        html.P(row['event_description'],),
-                        html.P(row['source_name']),
-                        html.Img(src=row['photo_link'], style={
-                            "width": "300px", "height": "auto"}),
-                    ], style={'width': '300px', 'white-space': 'normal'})),
-
+                dl.Tooltip(row['event_title']),
                 dl.Popup(
                     html.Div([
                         html.H3(row['event_title'], style={
-                                "color": "darkblue", "overflow-wrap": "break-word"}),
-                        html.P(row['event_description'],),
-                        html.P(row['source_name']),
-                        html.Img(src=row['photo_link'], style={
-                            "width": "300px", "height": "auto"}),
+                            "color": "darkblue", "overflow-wrap": "break-word"}),
+                        html.P(
+                            f"Date: {row['event_date'].strftime('%Y-%m-%d')}"),
+                        html.P(f"Trigger: {row['landslide_trigger']}"),
+                        html.P(f"Size: {row['landslide_size']}"),
+                        html.P(f"Fatalities: {int(row['fatality_count'])}"),
+                        html.P(f"Source: {row['source_name']}"),
+                        html.A("Source URL",
+                               href=row['source_link'], target="_blank"),
                     ], style={'width': '300px', 'white-space': 'normal'})),
             ]
         )
         for i, row in global_filtered_df.iterrows()
     ]
+
     print(markers[0])
     return markers
 
@@ -265,12 +256,12 @@ def update_twitter_share_button(tweet_text):
 # Add a callback to update the bar chart
 
 
-@app.callback(Output('bar-chart', 'figure'),
-              Input('dropdown', 'value'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'),
-              Input('trigger-dropdown', 'value'),
-              Input('size-dropdown', 'value'))
+@ app.callback(Output('bar-chart', 'figure'),
+               Input('dropdown', 'value'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'),
+               Input('trigger-dropdown', 'value'),
+               Input('size-dropdown', 'value'))
 def update_bar_chart(selected_value, start_date, end_date, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(
         pd.Timestamp(start_date), pd.Timestamp(end_date))]
@@ -306,12 +297,12 @@ def update_bar_chart(selected_value, start_date, end_date, selected_triggers, se
 
 
 # Pie chart callback
-@app.callback(Output('pie-chart', 'figure'),
-              Input('dropdown', 'value'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'),
-              Input('trigger-dropdown', 'value'),
-              Input('size-dropdown', 'value'))
+@ app.callback(Output('pie-chart', 'figure'),
+               Input('dropdown', 'value'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'),
+               Input('trigger-dropdown', 'value'),
+               Input('size-dropdown', 'value'))
 def update_pie_chart(selected_value, start_date, end_date, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(
         pd.Timestamp(start_date), pd.Timestamp(end_date))]
@@ -337,12 +328,12 @@ def update_pie_chart(selected_value, start_date, end_date, selected_triggers, se
 # Histogram callback
 
 
-@app.callback(Output('histogram', 'figure'),
-              Input('dropdown', 'value'),
-              Input('datepickerrange', 'start_date'),
-              Input('datepickerrange', 'end_date'),
-              Input('trigger-dropdown', 'value'),
-              Input('size-dropdown', 'value'))
+@ app.callback(Output('histogram', 'figure'),
+               Input('dropdown', 'value'),
+               Input('datepickerrange', 'start_date'),
+               Input('datepickerrange', 'end_date'),
+               Input('trigger-dropdown', 'value'),
+               Input('size-dropdown', 'value'))
 def update_histogram(selected_value, start_date, end_date, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(
         pd.Timestamp(start_date), pd.Timestamp(end_date))]
