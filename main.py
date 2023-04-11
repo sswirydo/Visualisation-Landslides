@@ -12,31 +12,15 @@ from dash import dcc
 import dash
 import pandas as pd
 
-
 app = dash.Dash(__name__, title='Landslides',
                 external_stylesheets=[dbc.themes.DARKLY])
 
 print('###### RESTART #######')
 
-# df_landslide = prep.get_df()  # TODO TODO TODO (cf. preprocess.py)
 df_landslide = pd.read_csv(
     './data/Global_Landslide_Catalog_Export.csv', parse_dates=['event_date'])
-# df_landslide["event_date"] = pd.to_datetime(df_landslide["event_date"])
-
-
-"""
-╔═════════════════════════╗
-║         Dashboard       ║
-╚═════════════════════════╝
-"""
 
 app.layout = html.Div([
-    # dcc.Interval( # remove auto refresh component
-    #     id='interval-component',
-    #     interval=0,
-    #     n_intervals=0
-    # ),
-
     html.Div(children=[
         html.H1(    # Title
             children="⛰️ Landslides 🏞️",
@@ -81,53 +65,30 @@ app.layout = html.Div([
                     id='markers'
                 ),
                 html.Div(id='clicked-marker-index', hidden=True),
-                html.Div(id='prev-marker-clicks', hidden=True, children=[0]*len(df_landslide))
+                html.Div(id='prev-marker-clicks', hidden=True,
+                         children=[0]*len(df_landslide))
             ],
             style={'width': '100%', 'height': '50vh',
                    'margin': "auto", "display": "block"},
             center=[51.5074, -0.1278],
-
-            # Permet de limiter la carte infinie à juste 1x le monde
             bounds=[[-90, -180], [90, 180]],
             maxBounds=[[-90, -180], [90, 180]],
             maxBoundsViscosity=1.0,
-
             zoom=10,
             id='map'
         ),
-        # dcc.Graph(id='map', style={'height': '90vh'}, figure=dict(layout=dict(
-        #    autosize=True)), config=dict(responsive=True, displayModeBar=False))
-
     ], style={'padding': 10, 'flex': 1}),
 
     html.Div(children=[  # Right side
-        # html.Label('Checkboxes'),
-        # dcc.Checklist(['New York City', 'Montréal', 'San Francisco'],
-        #               ['Montréal', 'San Francisco']
-        # ),
-
-        # html.Br(),
-        # html.Label('Text Input'),
-        # dcc.Input(value='MTL', type='text'),
-
-        # html.Br(),
-        # html.Label('Slider'),
-        # dcc.Slider(
-        #     min=datetime.strptime(df_landslide['event_date'].min(),
-        #     max=datetime.strptime(df_landslide['event_date'].max(),
-        #     #marks={i: f'Label {i}' if i == 1 else str(i) for i in range(1, 6)},
-        #     #value=5,
-        # ),
-
         dcc.Input(
             id='tweet-text',
             type='text',
             placeholder='Enter your tweet here',
             value='[message] #landslides #druids #Info-Vis',
             style={'width': '100%', 'zIndex': 10}
+
         ),
 
-        # Define the layout for the Twitter share button
         dcc.Link(
             'Share on Twitter 🐦',
             id='twitter-share-button',
@@ -136,23 +97,12 @@ app.layout = html.Div([
             style={'color': 'white', 'text-decoration': 'none',
                    'font-size': '20px', 'padding': '10px'},
         ),
-
-        # html.Img( # Image
-        #     src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
-
     ], style={'padding': 10, 'flex': 1})
 ], style={'backgroundColor': '#66c572', 'display': 'flex', 'flex-direction': 'row'}
 )
 
-
-"""
-╔══════════════════════╗
-║         Others       ║
-╚══════════════════════╝
-"""
-
-
 global_filtered_df = None
+
 
 @app.callback(Output('markers', 'children'),
               Input('dropdown', 'value'),
@@ -162,9 +112,9 @@ def update_figure(selected_value, start_date, end_date):
     global global_filtered_df
     data = df_landslide[df_landslide['event_date'].between(
         pd.Timestamp(start_date), pd.Timestamp(end_date))]
-
     global_filtered_df = data[data['landslide_category'] == selected_value]
-    global_filtered_df['fatality_count'] = global_filtered_df['fatality_count'].fillna(0)
+    global_filtered_df['fatality_count'] = global_filtered_df['fatality_count'].fillna(
+        0)
     markers = [
         dl.Marker(
             id={"type": "marker", "index": i},
@@ -197,64 +147,55 @@ def update_figure(selected_value, start_date, end_date):
     return markers
 
 
-@ app.callback(Output('output-container-date-picker-range', 'children'),
-               Input('datepickerrange', 'start_date'),
-               Input('datepickerrange', 'end_date'))
+@app.callback(Output('output-container-date-picker-range', 'children'),
+              Input('datepickerrange', 'start_date'),
+              Input('datepickerrange', 'end_date'))
 def update_output_datepicker(start_date, end_date):
     return str(start_date)
 
 
-# @app.callback(Output("clicked-marker-index", "children"), [Input("map", "click_feature")])
-# def capital_click(feature):
-#     if feature is not None:
-#         return f"You clicked {feature['properties']['name']}"
-
-
-@app.callback(
-    Output("clicked-marker-index", "children"),
-    Input({"type": "marker", "index": ALL}, "n_clicks"),
-    State({"type": "marker", "index": ALL}, "position"),
-    State("prev-marker-clicks", "children")
-)
-def marker_click(n_clicks, positions, prev_marker_clicks):
-    if not any(n_clicks):  # No marker has been clicked
-        raise PreventUpdate
-
+@app.callback([Output("clicked-marker-index", "children"),
+               Output('prev-marker-clicks', 'children')],
+              [Input({'type': 'marker', 'index': ALL}, 'n_clicks')],
+              [State({'type': 'marker', 'index': ALL}, 'position'),
+               State('prev-marker-clicks', 'children')])
+def marker_click(n_clicks, positions, prev_clicks):
     clicked_marker_idx = None
-    for i, (prev, curr) in enumerate(zip(prev_marker_clicks, n_clicks)):
+
+    for i, (prev, curr) in enumerate(zip(prev_clicks, n_clicks)):
         if prev != curr:
             clicked_marker_idx = i
             break
 
-    prev_marker_clicks[clicked_marker_idx] = n_clicks[clicked_marker_idx]
-
     if clicked_marker_idx is not None:
         clicked_position = positions[clicked_marker_idx]
-        print(f"Clicked marker: position={clicked_position}, index={clicked_marker_idx}")
-        return clicked_marker_idx
+        print(
+            f"Clicked marker: position={clicked_position}, index={clicked_marker_idx}")
+        return clicked_marker_idx, n_clicks
+    return dash.no_update, prev_clicks
 
-    return dash.no_update
-
-
-
-#TODO FIX MARKER COUNTER UPDATE
 
 @app.callback(Output('tweet-text', 'value'),
               Input('clicked-marker-index', 'children'))
 def update_tweet_text(clicked_marker_idx):
-    if clicked_marker_idx is not None and global_filtered_df is not None:
-        clicked_row = global_filtered_df.iloc[clicked_marker_idx]
-        tweet_text = f"{clicked_row['event_title']} at {clicked_row['latitude']}, {clicked_row['longitude']} #landslides #druids #Info-Vis"
-        return tweet_text
-    else:
-        return "[message] #landslides #druids #Info-Vis"
+    if clicked_marker_idx is None:
+        raise PreventUpdate
 
-"""
-╔════════════════════════╗
-║         Execution      ║
-╚════════════════════════╝
-"""
+    row = global_filtered_df.iloc[clicked_marker_idx]
+    event_title = row['event_title']
+    source_name = row['source_name']
+    event_date = row['event_date'].strftime("%Y-%m-%d")
 
-if __name__ == "__main__":
+    tweet = f"{event_title} on {event_date} by {source_name}. #landslides #druids #Info-Vis"
+    return tweet
+
+
+@app.callback(Output('twitter-share-button', 'href'),
+              Input('tweet-text', 'value'))
+def update_twitter_share_button(tweet_text):
+    tweet_url = "https://twitter.com/intent/tweet?text=urllib.parse.quote(tweet_text)"
+    return tweet_url
+
+
+if __name__ == '__main__':
     app.run_server(debug=True)
-    None
