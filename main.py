@@ -12,6 +12,7 @@ from dash import dcc
 import dash
 import pandas as pd
 import urllib.parse
+import plotly.graph_objects as go
 
 
 app = dash.Dash(__name__, title='Landslides',
@@ -99,6 +100,8 @@ app.layout = html.Div([
             style={'color': 'white', 'text-decoration': 'none',
                    'font-size': '20px', 'padding': '10px'},
         ),
+
+        dcc.Graph(id='bar-chart'),
     ], style={'padding': 10, 'flex': 1})
 ], style={'backgroundColor': '#66c572', 'display': 'flex', 'flex-direction': 'row'}
 )
@@ -198,6 +201,35 @@ def update_twitter_share_button(tweet_text):
     tweet_url = "https://twitter.com/intent/tweet?text=" + \
         urllib.parse.quote(tweet_text)
     return tweet_url
+
+# Add a callback to update the bar chart
+
+
+@app.callback(Output('bar-chart', 'figure'),
+              Input('dropdown', 'value'),
+              Input('datepickerrange', 'start_date'),
+              Input('datepickerrange', 'end_date'))
+def update_bar_chart(selected_value, start_date, end_date):
+    data = df_landslide[df_landslide['event_date'].between(
+        pd.Timestamp(start_date), pd.Timestamp(end_date))]
+    filtered_df = data[data['landslide_category'] == selected_value]
+    filtered_df['year'] = filtered_df['event_date'].dt.year
+    yearly_counts = filtered_df.groupby(
+        'year').size().reset_index(name='count')
+
+    fig = go.Figure(data=[
+        go.Bar(x=yearly_counts['year'], y=yearly_counts['count'])
+    ])
+    fig.update_layout(
+        title=f"Landslides per Year for {selected_value}",
+        xaxis_title="Year",
+        yaxis_title="Number of Landslides",
+        font=dict(color="#CFCFCF"),
+        plot_bgcolor="#3E3E3E",
+        paper_bgcolor="#3E3E3E",
+    )
+
+    return fig
 
 
 if __name__ == '__main__':
