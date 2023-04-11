@@ -1,4 +1,4 @@
-
+2
 import pandas as pd
 
 import dash
@@ -34,6 +34,11 @@ df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
 """
 
 app.layout = html.Div([
+    # dcc.Interval( # remove auto refresh component
+    #     id='interval-component',
+    #     interval=0,
+    #     n_intervals=0
+    # ),
 
     html.Div(children=[
         html.H1(    # Title
@@ -121,7 +126,8 @@ app.layout = html.Div([
             id='tweet-text',
             type='text',
             placeholder='Enter your tweet here',
-            value='[message] #landslides #druids #Info-Vis'
+            value='[message] #landslides #druids #Info-Vis',
+            style={'width': '100%', 'zIndex': 10}
         ),
 
         # Define the layout for the Twitter share button
@@ -129,13 +135,13 @@ app.layout = html.Div([
             'Share on Twitter 🐦',
             id='twitter-share-button',
             href='https://youtu.be/dQw4w9WgXcQ',
-            target='_blank'
-
+            target='_blank',
+            style={'color': 'white', 'text-decoration': 'none', 'font-size': '20px', 'padding': '10px'},
         ),
 
+        # html.Img( # Image
+        #     src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
 
-        html.Img( # Image
-            src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
     ], style={'padding': 10, 'flex': 1})
 ], style={'backgroundColor':'#66c572','display': 'flex', 'flex-direction': 'row'}
 )
@@ -165,33 +171,33 @@ def update_figure(selected_value, start_date, end_date):
     filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
     markers = [
         dl.Marker(
-            id={'type': 'marker', 'index': str(row['event_id'])},
+            id=f"marker-{i}",
             position=[row['latitude'], row['longitude']],
             children=[
                 dl.Tooltip(
                     html.Div([
-                        html.Img(src=row['photo_link'], style={
-                            "width": "50px", "height": "50px"}),
                         html.H3(row['event_title'], style={
                                 "color": "darkblue", "overflow-wrap": "break-word"}),
                         html.P(row['event_description'],),
                         html.P(row['source_name']),
+                        html.Img(src=row['photo_link'], style={
+                            "width": "300px", "height": "auto"}),
                     ], style={'width': '300px', 'white-space': 'normal'})),
 
                 dl.Popup(
                     html.Div([
-                        html.Img(src=row['photo_link'], style={
-                            "width": "50px", "height": "50px"}),
                         html.H3(row['event_title'], style={
                                 "color": "darkblue", "overflow-wrap": "break-word"}),
                         html.P(row['event_description'],),
                         html.P(row['source_name']),
-                    ], style={'width': '300px', 'white-space': 'normal'}))
+                        html.Img(src=row['photo_link'], style={
+                            "width": "300px", "height": "auto"}),
+                    ], style={'width': '300px', 'white-space': 'normal'})),
             ]
         )
         for i, row in filtered_df.iterrows()
     ]
-    print(markers[0], markers[1])
+    print(markers[0])
     return markers
 
 
