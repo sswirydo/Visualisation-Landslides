@@ -1,21 +1,19 @@
-2
+import tweepy
+import datetime
+import preprocess as prep
+import plotly.express as px
+import plotly.graph_objs as go
+from dash.exceptions import PreventUpdate
+from dash.dependencies import Input, Output, State, ALL
+import dash_bootstrap_components as dbc
+import dash_leaflet as dl
+from dash import html
+from dash import dcc
+import dash
 import pandas as pd
 
-import dash
-from dash import dcc
-from dash import html
-import dash_leaflet as dl
-import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output, State, ALL
-from dash.exceptions import PreventUpdate
+2
 
-import plotly.graph_objs as go
-import plotly.express as px
-import preprocess as prep
-
-from datetime import datetime
-
-import tweepy 
 
 app = dash.Dash(__name__, title='Landslides',
                 external_stylesheets=[dbc.themes.DARKLY])
@@ -23,7 +21,8 @@ app = dash.Dash(__name__, title='Landslides',
 print('###### RESTART #######')
 
 # df_landslide = prep.get_df()  # TODO TODO TODO (cf. preprocess.py)
-df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
+df_landslide = pd.read_csv(
+    './data/Global_Landslide_Catalog_Export.csv', parse_dates=['event_date'])
 # df_landslide["event_date"] = pd.to_datetime(df_landslide["event_date"])
 
 
@@ -58,14 +57,12 @@ app.layout = html.Div([
                 dbc.Col([
                     dcc.DatePickerRange(
                         id='datepickerrange',
-                        start_date=datetime.strptime(
-                            df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        end_date=datetime.strptime(
-                            df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        min_date_allowed=datetime.strptime(
-                            df_landslide['event_date'].min(), '%m/%d/%Y %I:%M:%S %p').date(),
-                        max_date_allowed=datetime.strptime(
-                            df_landslide['event_date'].max(), '%m/%d/%Y %I:%M:%S %p').date(),
+                        start_date=df_landslide['event_date'].min().date(),
+                        end_date=df_landslide['event_date'].max().date(),
+                        min_date_allowed=df_landslide['event_date'].min(
+                        ).date(),
+                        max_date_allowed=df_landslide['event_date'].max(
+                        ).date(),
                         display_format='MM/DD/YYYY',
                         style={'width': '100%', 'zIndex': 10}
                     ),
@@ -84,7 +81,8 @@ app.layout = html.Div([
                 dl.MarkerClusterGroup(
                     html.Div(id='placeholder', hidden=True),
                     id='markers'
-                )
+                ),
+                html.Div(id='clicked-marker-index', hidden=True)
             ],
             style={'width': '100%', 'height': '50vh',
                    'margin': "auto", "display": "block"},
@@ -103,7 +101,7 @@ app.layout = html.Div([
 
     ], style={'padding': 10, 'flex': 1}),
 
-    html.Div(children=[ # Right side
+    html.Div(children=[  # Right side
         # html.Label('Checkboxes'),
         # dcc.Checklist(['New York City', 'Montréal', 'San Francisco'],
         #               ['Montréal', 'San Francisco']
@@ -136,14 +134,15 @@ app.layout = html.Div([
             id='twitter-share-button',
             href='https://youtu.be/dQw4w9WgXcQ',
             target='_blank',
-            style={'color': 'white', 'text-decoration': 'none', 'font-size': '20px', 'padding': '10px'},
+            style={'color': 'white', 'text-decoration': 'none',
+                   'font-size': '20px', 'padding': '10px'},
         ),
 
         # html.Img( # Image
         #     src="https://blogs.agu.org/landslideblog/files/2014/06/14_06-kakapo-3.jpg")
 
     ], style={'padding': 10, 'flex': 1})
-], style={'backgroundColor':'#66c572','display': 'flex', 'flex-direction': 'row'}
+], style={'backgroundColor': '#66c572', 'display': 'flex', 'flex-direction': 'row'}
 )
 
 
@@ -159,19 +158,14 @@ app.layout = html.Div([
               Input('datepickerrange', 'start_date'),
               Input('datepickerrange', 'end_date'))
 def update_figure(selected_value, start_date, end_date):
-    start_date = datetime.strptime(
-        start_date, '%Y-%m-%d')  # first transform to date
-    end_date = datetime.strptime(end_date, '%Y-%m-%d')
-    # then transform it to string again
-    start_date = start_date.strftime('%m/%d/%Y %I:%M:%S %p')
-    end_date = end_date.strftime('%m/%d/%Y %I:%M:%S %p')
     data = df_landslide[df_landslide['event_date'].between(
-        start_date, end_date)]
+        pd.Timestamp(start_date), pd.Timestamp(end_date))]
+
     filtered_df = data[data['landslide_category'] == selected_value]
     filtered_df['fatality_count'] = filtered_df['fatality_count'].fillna(0)
     markers = [
         dl.Marker(
-            id=f"marker-{i}",
+            id={"type": "marker", "index": i},
             position=[row['latitude'], row['longitude']],
             children=[
                 dl.Tooltip(
@@ -208,17 +202,30 @@ def update_output_datepicker(start_date, end_date):
     return str(start_date)
 
 
-@ app.callback(Output("placeholder", "children"),
-               [Input({'type': 'marker', 'index': ALL}, 'n_clicks')])
-def marker_click(args):
-    if not any(args):
-        print('no args')
-        return []
-    value = dash.callback_context.triggered[0]['value']
-    marker_id = json.loads(
-        dash.callback_context.triggered[0]['prop_id'].split(".")[0])["index"]
-    print(marker_id)
-    return []
+@app.callback(Output("clicked-marker-index", "children"),
+              [Input({'type': 'marker', 'index': ALL}, 'n_clicks')],
+              [State({'type': 'marker', 'index': ALL}, 'position')])
+def marker_click(*args_position_n_clicks):
+    args = args_position_n_clicks[0]  # n_clicks arguments
+    positions = args_position_n_clicks[1]  # position arguments
+    clicked_marker_idx = next((i for i, n in enumerate(args) if n), None)
+    if clicked_marker_idx is not None:
+        clicked_position = positions[clicked_marker_idx]
+        print(f"Clicked marker: position={clicked_position}")
+        return clicked_marker_idx
+
+    return dash.no_update
+
+
+@app.callback(Output('tweet-text', 'value'),
+              Input('clicked-marker-index', 'children'))
+def update_tweet_text(clicked_marker_idx):
+    if clicked_marker_idx is not None:
+        clicked_row = df_landslide.iloc[clicked_marker_idx]
+        tweet_text = f"{clicked_row['event_title']} at {clicked_row['latitude']}, {clicked_row['longitude']} #landslides #druids #Info-Vis"
+        return tweet_text
+    else:
+        return "[message] #landslides #druids #Info-Vis"
 
 
 """
