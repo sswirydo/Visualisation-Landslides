@@ -166,8 +166,13 @@ app.layout = dbc.Container([
                     style={'color': 'white', 'text-decoration': 'none',
                            'font-size': '20px', 'padding': '10px'},
                 ),
+                html.Img(src='https://thumbs.gfycat.com/MessyPlayfulBat-mobile.mp4',
+                         style={'height': '50px', 'width': '50px', 'margin-left': '10px'})
             ]),
         ], width=4),
+
+
+
     ]),
 ],  fluid=True, style={
     'background-image': 'url(https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80)',
