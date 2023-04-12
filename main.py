@@ -12,6 +12,8 @@ import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
 
+import preprocess
+
 
 app = dash.Dash(__name__, title='Landslides',
                 external_stylesheets=[dbc.themes.DARKLY, './styles.css'])
@@ -21,6 +23,8 @@ print('###### RESTART #######')
 
 df_landslide = pd.read_csv(
     './data/Global_Landslide_Catalog_Export.csv', parse_dates=['event_date'])
+
+# df_landslide = preprocess.get_df()
 
 app.layout = dbc.Container([
     html.Div(children=[
