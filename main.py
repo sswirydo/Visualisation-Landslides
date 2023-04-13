@@ -16,7 +16,7 @@ import preprocess
 
 
 app = dash.Dash(__name__, title='Landslides',
-                external_stylesheets=[dbc.themes.DARKLY, './styles.css'])
+                external_stylesheets=[dbc.themes.DARKLY, './assets/styles.css'])
 
 
 print('###### RESTART #######')
@@ -27,132 +27,22 @@ df_landslide = pd.read_csv(
 # df_landslide = preprocess.get_df()
 
 app.layout = dbc.Container([
-    html.Div(children=[
-        html.H1(    # Title
-            children="⛰️ Landslides 🏞️",
-            className="title"
-        ),
-        html.P(     # Subtitle
-            children=[
-                "Druids be like. ",
-                html.A("source", href="https://www.youtube.com/watch?v=1S6QTHwYTLI"),
-                "."
-            ],
-            style={"fontSize": "16px", "color": "white", "text-align": "center"},),
-    ]),
     dbc.Row([
         dbc.Col([
-            dbc.Card([
-                dbc.CardHeader("Data Filters"),
-                dbc.CardBody([
-                    # Date Picker
-                    dbc.Row([
-                        dbc.Label("Date Range", className="control-label"),
-                    ]),
-                    dbc.Row([
-                        dcc.DatePickerRange(
-                            id='datepickerrange',
-                            start_date=df_landslide['event_date'].min().date(),
-                            end_date=df_landslide['event_date'].max().date(),
-                            min_date_allowed=df_landslide['event_date'].min(
-                            ).date(),
-                            max_date_allowed=df_landslide['event_date'].max(
-                            ).date(),
-                            display_format='MM/DD/YYYY',
-                            style={'width': '100%', 'zIndex': 10},
-                            className='datepicker'
-                        ),
-                    ], className="mb-3"),
-                    # Landslide Category Dropdown
-                    dbc.Row([
-                        dbc.Label("Landslide Category",
-                                  className="control-label"),
-                    ]),
-                    dbc.Row([
-                        dcc.Dropdown(id='dropdown', style={"color": "black", 'width': '100%'}, options=[
-                            {'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], value='rock_fall')
-                    ], className="mb-3"),
-                    # Landslide Trigger Dropdown
-                    dbc.Row([
-                        dbc.Label("Landslide Triggers",
-                                  className="control-label"),
-                    ]),
-                    dbc.Row([
-                        dcc.Dropdown(
-                            id='trigger-dropdown',
-                            options=[{'label': i, 'value': i}
-                                     for i in df_landslide['landslide_trigger'].dropna().unique()],
-                            value=None,
-                            multi=True,
-                            placeholder="Select Landslide Triggers",
-                            className="dropdown",
-                            style={"color": "black", 'width': '100%'},
-                        ),
-                    ], className="mb-3"),
-                    # Landslide Size Dropdown
-                    dbc.Row([
-                        dbc.Label("Landslide Sizes",
-                                  className="control-label"),
-                    ]),
-                    dbc.Row([
-                        dcc.Dropdown(
-                            id='size-dropdown',
-                            options=[{'label': i, 'value': i}
-                                     for i in df_landslide['landslide_size'].dropna().unique()],
-                            value=None,
-                            multi=True,
-                            placeholder="Select Landslide Sizes",
-                            className="dropdown",
-                            style={"color": "black", 'width': '100%'},
-                        ),
-                    ], className="mb-3"),
-                ]),
-            ], className="mb-4"),
-        ], width=3),
+            html.Div(children=[
+                html.H1(    # Title
+                    children="⛰️ Landslides 🏞️",
+                    className="title"
+                ),
+            ]),
+            
+            dcc.Tabs(id="tabs-example-graph", value='tab-1-example-graph', children=[
+            dcc.Tab(label='Map', value='tab-1-example-graph'),
+            dcc.Tab(label='Dashboard', value='tab-2-example-graph'),
+            ]),
+            
+            html.Div(id='tabs-content-example-graph'),
 
-
-        dbc.Col([  # Plots (middle)
-            dcc.Loading(     # Bar chart
-                id="loading-icon",
-                type="circle",
-                children=[dcc.Graph(id='bar-chart')],
-                style={'textAlign': 'center'}
-            ),            dcc.Loading(     # Pie chart
-                id="loading-icon-pie",
-                type="circle",
-                children=[dcc.Graph(id='pie-chart')],
-                style={'textAlign': 'center'}
-            ),
-            dcc.Loading(     # Histogram
-                id="loading-icon-histogram",
-                type="circle",
-                children=[dcc.Graph(id='histogram')],
-                style={'textAlign': 'center'}
-            ),
-        ], width=6),
-        dbc.Col([  # Map (right)
-            dl.Map(     # Map
-                children=[
-                    dl.TileLayer(),
-                    dl.MarkerClusterGroup(
-                        html.Div(id='placeholder', hidden=True),
-                        id='markers'
-                    ),
-                    html.Div(id='clicked-marker-index', hidden=True),
-                    html.Div(id='prev-marker-clicks', hidden=True,
-                             children=[0]*len(df_landslide))
-                ],
-                style={'width': '100%', 'height': '50vh',
-                       'margin': "auto", "display": "block"},
-                center=[51.5074, -0.1278],
-                bounds=[[-90, -180], [90, 180]],
-                maxBounds=[[-90, -180], [90, 180]],
-                maxBoundsViscosity=1.0,
-                zoom=10,
-                id='map'
-            ),
-        ], width=3),
-        dbc.Col([
             html.Div(children=[  # Tweet input and share button
                 dcc.Input(
                     id='tweet-text',
@@ -161,28 +51,25 @@ app.layout = dbc.Container([
                     value='[message] #landslides #druids #Info-Vis',
                     style={'width': '100%', 'zIndex': 10}
                 ),
-
                 dcc.Link(
-                    'Share on Twitter 🐦',
-                    id='twitter-share-button',
-                    href='https://youtu.be/dQw4w9WgXcQ',
-                    target='_blank',
-                    style={'color': 'white', 'text-decoration': 'none',
-                           'font-size': '20px', 'padding': '10px'},
+                'Share on Twitter 🐦',
+                id='twitter-share-button',
+                href='https://youtu.be/dQw4w9WgXcQ',
+                target='_blank',
+                style={'color': 'white', 'text-decoration': 'none',
+                        'font-size': '20px', 'padding': '10px'},
                 ),
-                html.Img(src='https://thumbs.gfycat.com/MessyPlayfulBat-mobile.mp4',
-                         style={'height': '50px', 'width': '50px', 'margin-left': '10px'})
             ]),
-        ], width=4),
-
-
-
+            
+        ]),
     ]),
-],  fluid=True, style={
+], fluid=True, style={
     'background-image': 'url(https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80)',
     'background-repeat': 'no-repeat',
     'background-position': 'center',
-    'background-size': 'cover'
+    'background-size': 'cover',
+    'height': '100%',
+    'width': '100%'
 })
 
 
@@ -388,5 +275,142 @@ def update_histogram(selected_value, start_date, end_date, selected_triggers, se
     return fig
 
 
+@app.callback(Output('tabs-content-example-graph', 'children'),
+            Input('tabs-example-graph', 'value'))
+def render_content(tab):
+    if tab == 'tab-1-example-graph':
+        return html.Div([
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader("Data Filters"),
+                        dbc.CardBody([
+                            # Date Picker
+                            dbc.Row([
+                                dbc.Label("Date Range", className="control-label"),
+                            ]),
+                            dbc.Row([
+                                dcc.DatePickerRange(
+                                    id='datepickerrange',
+                                    start_date=df_landslide['event_date'].min().date(),
+                                    end_date=df_landslide['event_date'].max().date(),
+                                    min_date_allowed=df_landslide['event_date'].min(
+                                    ).date(),
+                                    max_date_allowed=df_landslide['event_date'].max(
+                                    ).date(),
+                                    display_format='MM/DD/YYYY',
+                                    style={'width': '100%', 'zIndex': 10},
+                                    className='datepicker'
+                                ),
+                            ], className="mb-3"),
+                            # Landslide Category Dropdown
+                            dbc.Row([
+                                dbc.Label("Landslide Category",
+                                        className="control-label"),
+                            ]),
+                            dbc.Row([
+                                dcc.Dropdown(id='dropdown', 
+                                            style={"color": "black", 'width': '100%'}, 
+                                            options=[{'label': i, 'value': i} for i in df_landslide['landslide_category'].dropna().unique()], 
+                                            value='rock_fall')
+                            ], className="mb-3"),
+                            # Landslide Trigger Dropdown
+                            dbc.Row([
+                                dbc.Label("Landslide Triggers",
+                                        className="control-label"),
+                            ]),
+                            dbc.Row([
+                                dcc.Dropdown(
+                                    id='trigger-dropdown',
+                                    options=[{'label': i, 'value': i}
+                                            for i in df_landslide['landslide_trigger'].dropna().unique()],
+                                    value=None,
+                                    multi=True,
+                                    placeholder="Select Landslide Triggers",
+                                    className="dropdown",
+                                    style={"color": "black", 'width': '100%'},
+                                ),
+                            ], className="mb-3"),
+                            # Landslide Size Dropdown
+                            dbc.Row([
+                                dbc.Label("Landslide Sizes",
+                                        className="control-label"),
+                            ]),
+                            dbc.Row([
+                                dcc.Dropdown(
+                                    id='size-dropdown',
+                                    options=[{'label': i, 'value': i}
+                                            for i in df_landslide['landslide_size'].dropna().unique()],
+                                    value=None,
+                                    multi=True,
+                                    placeholder="Select Landslide Sizes",
+                                    className="dropdown",
+                                    style={"color": "black", 'width': '100%'},
+                                ),
+                            ], className="mb-3"),
+                        ]),
+                    ], className="mb-4"),
+
+                    dl.Map(     # Map
+                        children=[
+                            dl.TileLayer(),
+                            dl.MarkerClusterGroup(
+                                html.Div(id='placeholder', hidden=True),
+                                id='markers'
+                            ),
+                            html.Div(id='clicked-marker-index', hidden=True),
+                            html.Div(id='prev-marker-clicks', hidden=True,
+                                    children=[0]*len(df_landslide))
+                        ],
+                        style={'width': '100%', 'height': '50vh',
+                            'margin': "auto", "display": "block"},
+                        center=[51.5074, -0.1278],
+                        bounds=[[-45, -90], [45, 90]],
+                        maxBounds=[[-90, -180], [90, 180]],
+                        maxBoundsViscosity=1.0,
+                        zoom=10,
+                        id='map'
+                    )
+                ], width = 5),
+
+                
+                dbc.Col([
+                    html.P("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Leo vel orci porta non pulvinar. Urna nunc id cursus metus aliquam. Quam nulla porttitor massa id neque aliquam vestibulum morbi blandit. Dapibus ultrices in iaculis nunc sed. Risus sed vulputate odio ut enim blandit volutpat maecenas. Nibh ipsum consequat nisl vel pretium lectus quam id leo. Lacinia quis vel eros donec ac odio tempor. Sit amet nisl suscipit adipiscing bibendum est ultricies integer. Commodo sed egestas egestas fringilla phasellus faucibus scelerisque eleifend. In tellus integer feugiat scelerisque varius morbi. Nunc consequat interdum varius sit. Tempor id eu nisl nunc mi ipsum faucibus. Et netus et malesuada fames ac turpis. Lorem ipsum dolor sit amet consectetur adipiscing elit. Scelerisque felis imperdiet proin fermentum leo vel. Eu mi bibendum neque egestas congue. Odio tempor orci dapibus ultrices in iaculis nunc sed. Id cursus metus aliquam eleifend mi. Adipiscing elit duis tristique sollicitudin nibh sit amet."),
+                    html.Img(src="https://images.unsplash.com/photo-1583665354191-634609954d54?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=764&q=80"),
+                ], width=5)
+            ])
+        ])
+    
+    elif tab == 'tab-2-example-graph':
+        return html.Div([
+            dbc.Col([  # Plots (middle)
+                dbc.Col([  # Bar chart
+                    dcc.Loading(
+                        id="loading-icon",
+                        type="circle",
+                        children=[dcc.Graph(id='bar-chart')],
+                        style={'textAlign': 'center'}
+                    ),
+                ]),
+
+                dbc.Col([  # Pie chart
+                    dcc.Loading(
+                        id="loading-icon-pie",
+                        type="circle",
+                        children=[dcc.Graph(id='pie-chart')],
+                        style={'textAlign': 'center'}
+                    ),
+                ]),
+
+                dbc.Col([  # Histogram
+                    dcc.Loading(
+                        id="loading-icon-histogram",
+                        type="circle",
+                        children=[dcc.Graph(id='histogram')],
+                        style={'textAlign': 'center'},
+                    ),
+                ])
+            ])
+        ])
 if __name__ == '__main__':
     app.run_server(debug=True)
