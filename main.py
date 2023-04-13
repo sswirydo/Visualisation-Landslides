@@ -160,11 +160,18 @@ map = html.Div(children=[
     )
 ])
 
+landslide_info = html.Div(children=[
+    html.Div([ # Not necessary as populated in callback, but makes it easier to visualize
+        html.H1(id='landslide-title'),
+        html.P(id='landslide-description'),
+        html.Img(id='landslide-image')
+    ], id='landslide-info', style={'background-color': 'white', 'padding': '10px', 'border-radius': '5px', 'margin': '10px'})
+])
+
 container = dbc.Container([
     dbc.Row([
         dbc.Col([title, picker, map, twitter], width=3),
-        dbc.Col([], width=3),
-        dbc.Col([], width=3),
+        dbc.Col([landslide_info], width=6),
         plots,
     ])
 ],  fluid=True, style={
@@ -183,7 +190,7 @@ app.layout = container
 # TODO MAKE THEM ALL USE THE global_filtered_df VARIABLE
 global_filtered_df = None
 
-    
+# Date range storage callback
 @app.callback(
     dash.dependencies.Output("date-range-storage", "data"),
     dash.dependencies.Input("datepickerrange", "value"),
@@ -191,6 +198,7 @@ global_filtered_df = None
 def update_date_range_storage(date_value):
     return {"start_date": date_value[0], "end_date": date_value[1]}
 
+# Map marker callback
 @ app.callback(Output('markers', 'children'),
                Input('category-dropdown', 'value'),
                Input('datepickerrange', 'value'),
@@ -261,13 +269,27 @@ def update_tweet_text(clicked_marker_idx):
     tweet = f"{event_title} on {event_date} by {source_name}. #landslides #druids #Info-Vis"
     return tweet
 
-# Add a callback to update the twitter share button
+# FIXME: Puts a default value before the user clicks on a marker
+# Callback updates the landslide description
+@ app.callback(Output('landslide-info', 'children'),
+               Input('clicked-marker-index', 'children'))
+def update_landslide_details(clicked_marker_idx):
+    if clicked_marker_idx is None:
+        raise PreventUpdate
+    row = global_filtered_df.iloc[clicked_marker_idx]
+    return [
+        html.H1(row['event_title'], style={"color": "darkblue"}),
+        html.P(row["event_description"], style={"color": "blueviolet"}),
+        html.Img(src=row['photo_link'], style={'width': '100%'})
+    ]
+
+# Callback updates the twitter share button
 @ app.callback(Output('twitter-share-button', 'href'), Input('tweet-text', 'value'))
 def update_twitter_share_button(tweet_text):
     tweet_url = "https://twitter.com/intent/tweet?text=" + urllib.parse.quote(tweet_text)
     return tweet_url
 
-# Add a callback to update the bar chart
+# Callback updates the bar chart
 @ app.callback(Output('bar-chart', 'figure'),
                Input('category-dropdown', 'value'),
                Input('datepickerrange', 'value'),
