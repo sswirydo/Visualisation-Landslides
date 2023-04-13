@@ -12,6 +12,8 @@ import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
 
+import dash_mantine_components as dmc
+
 import preprocess
 
 
@@ -47,13 +49,16 @@ twitter= html.Div(children=[
 
 # Date Picker Range
 date_picker_label = dbc.Label("Date Range", className="control-label")
-date_picker = dcc.DatePickerRange(
+date_picker = dmc.DateRangePicker(
     id='datepickerrange',
-    start_date=df_landslide['event_date'].min().date(),
-    end_date=df_landslide['event_date'].max().date(),
-    min_date_allowed=df_landslide['event_date'].min().date(),
-    max_date_allowed=df_landslide['event_date'].max().date(),
-    display_format='MM/DD/YYYY',
+    minDate=df_landslide['event_date'].min().date(),
+    maxDate=df_landslide['event_date'].max().date(),
+    value=[df_landslide['event_date'].min().date(), df_landslide['event_date'].max().date()],
+    # start_date=df_landslide['event_date'].min().date(),
+    # end_date=df_landslide['event_date'].max().date(),
+    # min_date_allowed=df_landslide['event_date'].min().date(),
+    # max_date_allowed=df_landslide['event_date'].max().date(),
+    # display_format='MM/DD/YYYY',
     style={'width': '100%', 'zIndex': 10},
     className='datepicker'
 )
@@ -181,21 +186,19 @@ global_filtered_df = None
     
 @app.callback(
     dash.dependencies.Output("date-range-storage", "data"),
-    dash.dependencies.Input("datepickerrange", "start_date"),
-    dash.dependencies.Input("datepickerrange", "end_date"),
+    dash.dependencies.Input("datepickerrange", "value"),
 )
-def update_date_range_storage(start_date, end_date):
-    return {"start_date": start_date, "end_date": end_date}
+def update_date_range_storage(date_value):
+    return {"start_date": date_value[0], "end_date": date_value[1]}
 
 @ app.callback(Output('markers', 'children'),
                Input('category-dropdown', 'value'),
-               Input('datepickerrange', 'start_date'),
-               Input('datepickerrange', 'end_date'),
+               Input('datepickerrange', 'value'),
                Input('trigger-dropdown', 'value'),
                Input('size-dropdown', 'value'))
-def update_figure(selected_value, start_date, end_date, selected_triggers, selected_sizes):
+def update_figure(selected_value, date_value, selected_triggers, selected_sizes):
     global global_filtered_df
-    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(start_date), pd.Timestamp(end_date))]
+    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
     filtered_df = data[data['landslide_category'] == selected_value]
     # Filter by selected triggers
     if selected_triggers:
@@ -267,12 +270,11 @@ def update_twitter_share_button(tweet_text):
 # Add a callback to update the bar chart
 @ app.callback(Output('bar-chart', 'figure'),
                Input('category-dropdown', 'value'),
-               Input('datepickerrange', 'start_date'),
-               Input('datepickerrange', 'end_date'),
+               Input('datepickerrange', 'value'),
                Input('trigger-dropdown', 'value'),
                Input('size-dropdown', 'value'))
-def update_bar_chart(selected_value, start_date, end_date, selected_triggers, selected_sizes):
-    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(start_date), pd.Timestamp(end_date))]
+def update_bar_chart(selected_value, date_value, selected_triggers, selected_sizes):
+    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
     filtered_df = data[data['landslide_category'] == selected_value]
     # Filter by selected triggers
     if selected_triggers:
@@ -296,12 +298,11 @@ def update_bar_chart(selected_value, start_date, end_date, selected_triggers, se
 # Pie chart callback
 @ app.callback(Output('pie-chart', 'figure'),
                Input('category-dropdown', 'value'),
-               Input('datepickerrange', 'start_date'),
-               Input('datepickerrange', 'end_date'),
+               Input('datepickerrange', 'value'),
                Input('trigger-dropdown', 'value'),
                Input('size-dropdown', 'value'))
-def update_pie_chart(selected_value, start_date, end_date, selected_triggers, selected_sizes):
-    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(start_date), pd.Timestamp(end_date))]
+def update_pie_chart(selected_value, date_value, selected_triggers, selected_sizes):
+    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
     filtered_df = data[data['landslide_category'] == selected_value]
     # Filter by selected triggers
     if selected_triggers:
@@ -317,12 +318,11 @@ def update_pie_chart(selected_value, start_date, end_date, selected_triggers, se
 # Histogram callback
 @ app.callback(Output('histogram', 'figure'),
                Input('category-dropdown', 'value'),
-               Input('datepickerrange', 'start_date'),
-               Input('datepickerrange', 'end_date'),
+               Input('datepickerrange', 'value'),
                Input('trigger-dropdown', 'value'),
                Input('size-dropdown', 'value'))
-def update_histogram(selected_value, start_date, end_date, selected_triggers, selected_sizes):
-    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(start_date), pd.Timestamp(end_date))]
+def update_histogram(selected_value, date_value, selected_triggers, selected_sizes):
+    data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
     filtered_df = data[data['landslide_category'] == selected_value]
     # Filter by selected triggers
     if selected_triggers:
