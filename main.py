@@ -11,6 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
+import functools
 
 import dash_mantine_components as dmc
 
@@ -62,6 +63,7 @@ date_picker = dmc.DateRangePicker(
     style={'width': '100%', 'zIndex': 10},
     className='datepicker'
 )
+
 date_store = dcc.Store(id="date-range-storage", data={"start_date": None, "end_date": None})
 # Landslide Category
 landslide_cat_label = dbc.Label("Landslide Category", className="control-label")
@@ -150,7 +152,7 @@ map = html.Div(children=[
         html.Div(id='clicked-marker-index', hidden=True),
         html.Div(id='prev-marker-clicks', hidden=True, children=[0]*len(df_landslide))
     ],
-        style={'width': '100%', 'height': '50vh', 'margin': "auto", "display": "block"},
+        style={'width': '100%', 'height': '350px', 'margin': "auto", "display": "block", "zIndex": 0},
         center=[51.5074, -0.1278],
         bounds=[[-45, -90], [45, 90]],
         maxBounds=[[-90, -180], [90, 180]],
@@ -180,7 +182,7 @@ container = dbc.Container([
     'background-position': 'center',
     'background-size': 'cover',
     'width': '100%',
-    'height': '100%',
+    'max-height' : '100vh'
 })
 
 
@@ -199,15 +201,23 @@ def update_date_range_storage(date_value):
     return {"start_date": date_value[0], "end_date": date_value[1]}
 
 # Map marker callback
-@ app.callback(Output('markers', 'children'),
-               Input('category-dropdown', 'value'),
-               Input('datepickerrange', 'value'),
-               Input('trigger-dropdown', 'value'),
-               Input('size-dropdown', 'value'))
-def update_figure(selected_value, date_value, selected_triggers, selected_sizes):
+@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
+@app.callback(Output('markers', 'children'),
+              Input('category-dropdown', 'value'),
+              Input('datepickerrange', 'value'),
+              Input('trigger-dropdown', 'value'),
+              Input('size-dropdown', 'value'))
+def update_figure(selected_value, date_value, selected_triggers, selected_sizes):    
     global global_filtered_df
+    if not selected_value:
+        raise PreventUpdate
+        
+    if isinstance(selected_value, str):
+        selected_value = [selected_value]
+        
     data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
-    filtered_df = data[data['landslide_category'] == selected_value]
+    filtered_df = data[data['landslide_category'].isin(selected_value)]
+
     # Filter by selected triggers
     if selected_triggers:
         filtered_df = filtered_df[filtered_df['landslide_trigger'].isin(selected_triggers)]
@@ -216,6 +226,7 @@ def update_figure(selected_value, date_value, selected_triggers, selected_sizes)
         filtered_df = filtered_df[filtered_df['landslide_size'].isin(selected_sizes)]
     global_filtered_df = filtered_df
     global_filtered_df['fatality_count'] = global_filtered_df['fatality_count'].fillna(0)
+
     markers = [
         dl.Marker(
             id={"type": "marker", "index": i},
@@ -257,10 +268,10 @@ def marker_click(n_clicks, positions, prev_clicks):
     return dash.no_update, prev_clicks
 
 # Add a callback to update the tweet text
-@ app.callback(Output('tweet-text', 'value'),
-               Input('clicked-marker-index', 'children'))
+@app.callback(Output('tweet-text', 'value'),
+              Input('clicked-marker-index', 'children'))
 def update_tweet_text(clicked_marker_idx):
-    if clicked_marker_idx is None:
+    if clicked_marker_idx is None or global_filtered_df is None or global_filtered_df.empty:
         raise PreventUpdate
     row = global_filtered_df.iloc[clicked_marker_idx]
     event_title = row['event_title']
@@ -268,6 +279,7 @@ def update_tweet_text(clicked_marker_idx):
     event_date = row['event_date'].strftime("%Y-%m-%d")
     tweet = f"{event_title} on {event_date} by {source_name}. #landslides #druids #Info-Vis"
     return tweet
+
 
 # FIXME: Puts a default value before the user clicks on a marker
 # Callback updates the landslide description
@@ -290,6 +302,7 @@ def update_twitter_share_button(tweet_text):
     return tweet_url
 
 # Callback updates the bar chart
+@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @ app.callback(Output('bar-chart', 'figure'),
                Input('category-dropdown', 'value'),
                Input('datepickerrange', 'value'),
@@ -297,13 +310,22 @@ def update_twitter_share_button(tweet_text):
                Input('size-dropdown', 'value'))
 def update_bar_chart(selected_value, date_value, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
-    filtered_df = data[data['landslide_category'] == selected_value]
+    if isinstance(selected_value, str):
+        selected_value = [selected_value]
+    filtered_df = data[data['landslide_category'].isin(selected_value)]
     # Filter by selected triggers
     if selected_triggers:
         filtered_df = filtered_df[filtered_df['landslide_trigger'].isin(selected_triggers)]
     # Filter by selected sizes
     if selected_sizes:
         filtered_df = filtered_df[filtered_df['landslide_size'].isin(selected_sizes)]
+    if filtered_df.empty:
+        return go.Figure().update_layout(
+            title=f"No data for selected filters",
+            font=dict(color="#CFCFCF"),
+            plot_bgcolor="#3E3E3E",
+            paper_bgcolor="#3E3E3E",
+        )
     filtered_df['year'] = filtered_df['event_date'].dt.year
     yearly_counts = filtered_df.groupby('year').size().reset_index(name='count')
     fig = go.Figure(data=[go.Bar(x=yearly_counts['year'], y=yearly_counts['count'])])
@@ -317,7 +339,9 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
     )
     return fig
 
+
 # Pie chart callback
+@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @ app.callback(Output('pie-chart', 'figure'),
                Input('category-dropdown', 'value'),
                Input('datepickerrange', 'value'),
@@ -325,7 +349,10 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
                Input('size-dropdown', 'value'))
 def update_pie_chart(selected_value, date_value, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
-    filtered_df = data[data['landslide_category'] == selected_value]
+    if isinstance(selected_value, str):
+        selected_value = [selected_value]
+    filtered_df = data[data['landslide_category'].isin(selected_value)]
+
     # Filter by selected triggers
     if selected_triggers:
         filtered_df = filtered_df[filtered_df['landslide_trigger'].isin(selected_triggers)]
@@ -338,6 +365,7 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
     return fig
 
 # Histogram callback
+@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @ app.callback(Output('histogram', 'figure'),
                Input('category-dropdown', 'value'),
                Input('datepickerrange', 'value'),
@@ -345,7 +373,10 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
                Input('size-dropdown', 'value'))
 def update_histogram(selected_value, date_value, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
-    filtered_df = data[data['landslide_category'] == selected_value]
+    if isinstance(selected_value, str):
+        selected_value = [selected_value]
+    filtered_df = data[data['landslide_category'].isin(selected_value)]
+
     # Filter by selected triggers
     if selected_triggers:
         filtered_df = filtered_df[filtered_df['landslide_trigger'].isin(selected_triggers)]
