@@ -1,6 +1,5 @@
 import datetime
 import urllib.parse
-
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc
@@ -12,22 +11,15 @@ import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
 import functools
-
 import dash_mantine_components as dmc
-
 import preprocess
-
 
 app = dash.Dash(__name__, title='Landslides',
                 external_stylesheets=[dbc.themes.DARKLY, './assets/styles.css'])
 
-
 print('###### RESTART #######')
 
 df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv', parse_dates=['event_date'])
-
-# df_landslide = preprocess.get_df()
-
 
 title = html.H1(children="⛰️ Landslides 🏞️", className="title")
 
@@ -55,11 +47,6 @@ date_picker = dmc.DateRangePicker(
     minDate=df_landslide['event_date'].min().date(),
     maxDate=df_landslide['event_date'].max().date(),
     value=[df_landslide['event_date'].min().date(), df_landslide['event_date'].max().date()],
-    # start_date=df_landslide['event_date'].min().date(),
-    # end_date=df_landslide['event_date'].max().date(),
-    # min_date_allowed=df_landslide['event_date'].min().date(),
-    # max_date_allowed=df_landslide['event_date'].max().date(),
-    # display_format='MM/DD/YYYY',
     style={'width': '100%', 'zIndex': 10},
     className='datepicker'
 )
@@ -77,13 +64,14 @@ landslide_cat = dcc.Dropdown(
     className="dropdown",
     style={"color": "black", 'width': '100%', 'zIndex': 9},
 )
+
 # Landslide Trigger
 landslide_trigger_label = dbc.Label("Landslide Triggers", className="control-label")
 landslide_trigger = dcc.Dropdown(
     id='trigger-dropdown',
     options=[{'label': i, 'value': i}
              for i in df_landslide['landslide_trigger'].dropna().unique()],
-    value=None,
+    value='downpour',
     multi=True,
     placeholder="Select Landslide Triggers",
     className="dropdown",
@@ -122,28 +110,45 @@ picker = dbc.Card([
 ], className="mb-4")
 
 plots = dbc.Col([
-    # Bar chart
-    dcc.Loading(     
-        id="loading-icon",
-        type="circle",
-        children=[dcc.Graph(id='bar-chart')],
-        style={'textAlign': 'center'}
-    ),            
-    # Pie chart
-    dcc.Loading(     
-        id="loading-icon-pie",
-        type="circle",
-        children=[dcc.Graph(id='pie-chart')],
-        style={'textAlign': 'center'}
-    ),
-    # Histogram
-    dcc.Loading(     
-        id="loading-icon-histogram",
-        type="circle",
-        children=[dcc.Graph(id='histogram')],
-        style={'textAlign': 'center'}
-    )
-], width=3, style={'height': '100vh'})
+    dbc.Row([
+        dbc.Col([    
+            # Pie chart
+            dcc.Loading(     
+                id="loading-icon-pie",
+                type="circle",
+                children=[dcc.Graph(id='pie-chart')],
+                style={'textAlign': 'center'}
+            )], width={"size": 6}),
+        dbc.Col([    
+            # Pie chart
+            dcc.Loading(
+                id="loading-icon-histogram",
+                type="circle",
+                children=[dcc.Graph(id='histogram')],
+                style={'textAlign': 'center'}
+            )], width={"size": 6})
+    ]),
+    
+    dbc.Row([
+        dbc.Col([    
+            # Pie chart
+            dcc.Loading(     
+                id="loading-icon",
+                type="circle",
+                children=[dcc.Graph(id='bar-chart')],
+                style={'textAlign': 'center'}
+                )], width={"size": 6}),
+        dbc.Col([    
+            # Pie chart
+            dcc.Loading(
+                id="loading-icon-histogram",
+                type="circle",
+                children=[dcc.Graph(id='histogram')],
+                style={'textAlign': 'center'}
+            )], width={"size": 6})
+    ])
+], width=6, style={'height': '100vh'})
+
 
 map = html.Div(children=[
     dl.Map([
@@ -173,7 +178,7 @@ landslide_info = html.Div(children=[
 container = dbc.Container([
     dbc.Row([
         dbc.Col([title, picker, map, twitter], width=3),
-        dbc.Col([landslide_info], width=6),
+        dbc.Col([landslide_info], width=3),
         plots,
     ])
 ],  fluid=True, style={
@@ -209,14 +214,15 @@ def update_date_range_storage(date_value):
               Input('size-dropdown', 'value'))
 def update_figure(selected_value, date_value, selected_triggers, selected_sizes):    
     global global_filtered_df
-    if not selected_value:
-        raise PreventUpdate
-        
-    if isinstance(selected_value, str):
-        selected_value = [selected_value]
-        
+    
     data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
-    filtered_df = data[data['landslide_category'].isin(selected_value)]
+    
+    if selected_value:  # Only filter by category if selected_value is not None
+        if isinstance(selected_value, str):
+            selected_value = [selected_value]
+        filtered_df = data[data['landslide_category'].isin(selected_value)]
+    else:
+        filtered_df = data
 
     # Filter by selected triggers
     if selected_triggers:
@@ -310,9 +316,13 @@ def update_twitter_share_button(tweet_text):
                Input('size-dropdown', 'value'))
 def update_bar_chart(selected_value, date_value, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
-    if isinstance(selected_value, str):
-        selected_value = [selected_value]
-    filtered_df = data[data['landslide_category'].isin(selected_value)]
+    
+    if selected_value:
+        if isinstance(selected_value, str):
+            selected_value = [selected_value]
+        filtered_df = data[data['landslide_category'].isin(selected_value)]
+    else:
+        filtered_df = data
     # Filter by selected triggers
     if selected_triggers:
         filtered_df = filtered_df[filtered_df['landslide_trigger'].isin(selected_triggers)]
@@ -339,7 +349,6 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
     )
     return fig
 
-
 # Pie chart callback
 @functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @ app.callback(Output('pie-chart', 'figure'),
@@ -349,9 +358,13 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
                Input('size-dropdown', 'value'))
 def update_pie_chart(selected_value, date_value, selected_triggers, selected_sizes):
     data = df_landslide[df_landslide['event_date'].between(pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1]))]
-    if isinstance(selected_value, str):
-        selected_value = [selected_value]
-    filtered_df = data[data['landslide_category'].isin(selected_value)]
+    
+    if selected_value:
+        if isinstance(selected_value, str):
+            selected_value = [selected_value]
+        filtered_df = data[data['landslide_category'].isin(selected_value)]
+    else:
+        filtered_df = data
 
     # Filter by selected triggers
     if selected_triggers:
@@ -386,8 +399,6 @@ def update_histogram(selected_value, date_value, selected_triggers, selected_siz
     fig = px.histogram(filtered_df, x='landslide_trigger', y='event_date', nbins=10, title='Histogram of Landslide Triggers by Year')
     fig.update_layout(font=dict(color="#CFCFCF"), plot_bgcolor="#3E3E3E", paper_bgcolor="#3E3E3E")
     return fig
-
-
 
 if __name__ == '__main__':
     app.run_server(debug=True)
