@@ -1,6 +1,6 @@
 .title {
     text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00, 0 0 40px #00ff00;
-    animation: glow 1s ease-in-out infinite alternate;
+    /*animation: glow 1s ease-in-out infinite alternate;*/
     text-align:center;
   }
   

@@ -114,6 +114,11 @@ landslide_size = dcc.Dropdown(
     style={"color": "black", "width": "100%", "zIndex": 7},
 )
 
+debounce_interval = dcc.Interval(
+    id="debounce-interval",
+    interval=500,  # in milliseconds (500 ms = 0.5 seconds)
+    n_intervals=0,
+)
 
 picker = dbc.Card(
     [
@@ -132,6 +137,7 @@ picker = dbc.Card(
                 # Landslide Size
                 dbc.Row([landslide_size_label]),
                 dbc.Row([landslide_size], class_name="mb-3"),
+                debounce_interval,
             ]
         ),
     ],
@@ -210,7 +216,7 @@ map = html.Div(
                 dl.MarkerClusterGroup(
                     html.Div(id="placeholder", hidden=True),
                     id="markers",
-                    options={"chunkedLoading": True, "chunkInterval": 50},
+                    options={"chunkedLoading": True, "chunkInterval": 200},
                 ),
                 html.Div(id="clicked-marker-index", hidden=True),
                 html.Div(
@@ -232,9 +238,25 @@ map = html.Div(
             maxBoundsViscosity=1.0,
             zoom=10,
             id="map",
-        )
-    ]
+        ),
+        dcc.Loading(
+            id="loading",
+            type="circle",
+            children=[html.Div(id="loading-placeholder", hidden=True)],
+            style={
+                "position": "absolute",
+                "width": "100%",
+                "height": "350px",
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center",
+                "zIndex": 1,
+            },
+        ),
+    ],
+    style={"position": "relative"},
 )
+
 
 landslide_info = html.Div(
     children=[
@@ -353,7 +375,6 @@ def update_figure(
     update_global_filtered_df(
         selected_value, date_value, selected_triggers, selected_sizes
     )
-    global global_filtered_df
     print(current_zoom)
     if current_zoom <= ZOOM_THRESHOLD:
         markers = [
@@ -456,10 +477,15 @@ def update_landslide_details(clicked_marker_idx):
     if clicked_marker_idx is None:
         raise PreventUpdate
     row = global_filtered_df.iloc[clicked_marker_idx]
+    img_link = row["photo_link"]
+    print(img_link)
+    if img_link != img_link:  # if img_link is NaN
+        img_link = "https://i.pinimg.com/originals/77/49/3d/77493de0dd994f9a262ce0d85fe3c31d.gif"
+    print(row["photo_link"])
     return [
         html.H1(row["event_title"], style={"color": "darkblue"}),
         html.P(row["event_description"], style={"color": "blueviolet"}),
-        html.Img(src=row["photo_link"], style={"width": "100%"}),
+        html.Img(src=img_link, style={"width": "100%"}),
     ]
 
 
@@ -527,7 +553,6 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
     update_global_filtered_df(
         selected_value, date_value, selected_triggers, selected_sizes
     )
-
     global global_filtered_df
     filtered_df = global_filtered_df
 
@@ -559,7 +584,6 @@ def update_histogram(selected_value, date_value, selected_triggers, selected_siz
     update_global_filtered_df(
         selected_value, date_value, selected_triggers, selected_sizes
     )
-
     global global_filtered_df
     filtered_df = global_filtered_df
 
