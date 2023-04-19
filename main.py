@@ -208,7 +208,9 @@ map = html.Div(
             [
                 dl.TileLayer(),
                 dl.MarkerClusterGroup(
-                    html.Div(id="placeholder", hidden=True), id="markers"
+                    html.Div(id="placeholder", hidden=True),
+                    id="markers",
+                    options={"chunkedLoading": True, "chunkInterval": 50},
                 ),
                 html.Div(id="clicked-marker-index", hidden=True),
                 html.Div(
