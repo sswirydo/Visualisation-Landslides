@@ -294,6 +294,8 @@ def update_date_range_storage(date_value):
 
 # Map marker callback
 
+ZOOM_THRESHOLD = 4  # Adjust this value #TODO
+
 
 @functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @app.callback(
@@ -302,8 +304,11 @@ def update_date_range_storage(date_value):
     Input("datepickerrange", "value"),
     Input("trigger-dropdown", "value"),
     Input("size-dropdown", "value"),
+    Input("map", "zoom"),  # Add the zoom level as an input
 )
-def update_figure(selected_value, date_value, selected_triggers, selected_sizes):
+def update_figure(
+    selected_value, date_value, selected_triggers, selected_sizes, current_zoom
+):
     global global_filtered_df
 
     data = df_landslide[
@@ -335,39 +340,46 @@ def update_figure(selected_value, date_value, selected_triggers, selected_sizes)
     global_filtered_df["fatality_count"] = global_filtered_df["fatality_count"].fillna(
         0
     )
-
-    markers = [
-        dl.Marker(
-            id={"type": "marker", "index": i},
-            position=[row["latitude"], row["longitude"]],
-            children=[
-                dl.Tooltip(row["event_title"]),
-                dl.Popup(
-                    html.Div(
-                        [
-                            html.H3(
-                                row["event_title"],
-                                style={
-                                    "color": "darkblue",
-                                    "overflow-wrap": "break-word",
-                                },
-                            ),
-                            html.P(f"Date: {row['event_date'].strftime('%Y-%m-%d')}"),
-                            html.P(f"Trigger: {row['landslide_trigger']}"),
-                            html.P(f"Size: {row['landslide_size']}"),
-                            html.P(f"Fatalities: {int(row['fatality_count'])}"),
-                            html.P(f"Source: {row['source_name']}"),
-                            html.A(
-                                "Source URL", href=row["source_link"], target="_blank"
-                            ),
-                        ],
-                        style={"width": "300px", "white-space": "normal"},
-                    )
-                ),
-            ],
-        )
-        for i, row in global_filtered_df.iterrows()
-    ]
+    print(current_zoom)
+    if current_zoom <= ZOOM_THRESHOLD:
+        markers = [
+            dl.Marker(
+                id={"type": "marker", "index": i},
+                position=[row["latitude"], row["longitude"]],
+                children=[
+                    dl.Tooltip(row["event_title"]),
+                    dl.Popup(
+                        html.Div(
+                            [
+                                html.H3(
+                                    row["event_title"],
+                                    style={
+                                        "color": "darkblue",
+                                        "overflow-wrap": "break-word",
+                                    },
+                                ),
+                                html.P(
+                                    f"Date: {row['event_date'].strftime('%Y-%m-%d')}"
+                                ),
+                                html.P(f"Trigger: {row['landslide_trigger']}"),
+                                html.P(f"Size: {row['landslide_size']}"),
+                                html.P(f"Fatalities: {int(row['fatality_count'])}"),
+                                html.P(f"Source: {row['source_name']}"),
+                                html.A(
+                                    "Source URL",
+                                    href=row["source_link"],
+                                    target="_blank",
+                                ),
+                            ],
+                            style={"width": "300px", "white-space": "normal"},
+                        )
+                    ),
+                ],
+            )
+            for i, row in global_filtered_df.iterrows()
+        ]
+    else:
+        return []
     return markers
 
 
@@ -469,20 +481,20 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
     if selected_value:
         if isinstance(selected_value, str):
             selected_value = [selected_value]
-        if isinstance(selected_triggers, str):
-            selected_triggers = [selected_triggers]
-        if isinstance(selected_sizes, str):
-            selected_sizes = [selected_sizes]
         filtered_df = data[data["landslide_category"].isin(selected_value)]
     else:
         filtered_df = data
     # Filter by selected triggers
     if selected_triggers:
+        if isinstance(selected_triggers, str):
+            selected_triggers = [selected_triggers]
         filtered_df = filtered_df[
             filtered_df["landslide_trigger"].isin(selected_triggers)
         ]
     # Filter by selected sizes
     if selected_sizes:
+        if isinstance(selected_sizes, str):
+            selected_sizes = [selected_sizes]
         filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
     if filtered_df.empty:
         return go.Figure().update_layout(
@@ -526,21 +538,21 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
     if selected_value:
         if isinstance(selected_value, str):
             selected_value = [selected_value]
-        if isinstance(selected_triggers, str):
-            selected_triggers = [selected_triggers]
-        if isinstance(selected_sizes, str):
-            selected_sizes = [selected_sizes]
         filtered_df = data[data["landslide_category"].isin(selected_value)]
     else:
         filtered_df = data
 
     # Filter by selected triggers
     if selected_triggers:
+        if isinstance(selected_triggers, str):
+            selected_triggers = [selected_triggers]
         filtered_df = filtered_df[
             filtered_df["landslide_trigger"].isin(selected_triggers)
         ]
     # Filter by selected sizes
     if selected_sizes:
+        if isinstance(selected_sizes, str):
+            selected_sizes = [selected_sizes]
         filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
     pie_data = filtered_df["landslide_trigger"].value_counts()
     fig = px.pie(
@@ -572,22 +584,23 @@ def update_histogram(selected_value, date_value, selected_triggers, selected_siz
             pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1])
         )
     ]
-    if isinstance(selected_value, str):
-        selected_value = [selected_value]
-    if isinstance(selected_triggers, str):
-        selected_triggers = [selected_triggers]
-    if isinstance(selected_sizes, str):
-        selected_sizes = [selected_sizes]
+    if selected_value:
+        if isinstance(selected_value, str):
+            selected_value = [selected_value]
 
     filtered_df = data[data["landslide_category"].isin(selected_value)]
 
     # Filter by selected triggers
     if selected_triggers:
+        if isinstance(selected_triggers, str):
+            selected_triggers = [selected_triggers]
         filtered_df = filtered_df[
             filtered_df["landslide_trigger"].isin(selected_triggers)
         ]
     # Filter by selected sizes
     if selected_sizes:
+        if isinstance(selected_sizes, str):
+            selected_sizes = [selected_sizes]
         filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
     fig = px.histogram(
         filtered_df,
