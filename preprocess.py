@@ -2,6 +2,20 @@ import pandas as pd
 import numpy as np
 
 
+
+def preprocess(df_landslide):
+
+    # df_landslide = df_landslide.loc(:, ['source_name', 'event_date', 'event_description', 'latitude', 'longitude', 'country_name', 'location_description', 'landslide_type', 'landslide_size', 'trigger', 'fatality_count', 'injury_count', 'total_affected', 'source_link'])
+
+    return df_landslide
+
+
+
+
+###########################
+# OLD ARCHIVE STUFF BELOW #
+###########################
+
 def fix_latitude(lat):
     lat = str(lat).strip()
     multiplier = 1 if lat[-1] == "N" else -1

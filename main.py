@@ -22,11 +22,25 @@ app = dash.Dash(
 
 print("###### RESTART #######")
 
-df_landslide = pd.read_csv(
-    "./data/Global_Landslide_Catalog_Export.csv", parse_dates=["event_date"]
-)
+df_landslide = pd.read_csv("./data/Global_Landslide_Catalog_Export.csv", parse_dates=["event_date"])
+
+# Preprocess dataframes
+df_landslide = preprocess.preprocess(df_landslide)
 
 title = html.H1(children="⛰️ Landslides 🏞️", className="title")
+
+# Get a list of unique landslide categories
+categories = df_landslide["landslide_category"].unique()
+
+# Create a tab for each category
+tabs = [dcc.Tab(label=category, value=category) for category in categories]
+
+# Create the tabs component
+tablist = dcc.Tabs(
+    id="category-tabs",
+    value=categories[0],
+    children=tabs,
+)
 
 # Twitter
 twitter = html.Div(
@@ -35,7 +49,7 @@ twitter = html.Div(
             id="tweet-text",
             type="text",
             placeholder="Enter your tweet here",
-            value="[message] #landslides #druids #Info-Vis",
+            value="[message] #landslides #Info-Vis",
             style={"width": "100%", "zIndex": 10},
         ),
         dcc.Link(
@@ -53,36 +67,62 @@ twitter = html.Div(
     ]
 )
 
-# Date Picker Range
-date_picker_label = dbc.Label("Date Range", className="control-label")
-date_picker = dmc.DateRangePicker(
-    id="datepickerrange",
-    minDate=df_landslide["event_date"].min().date(),
-    maxDate=df_landslide["event_date"].max().date(),
-    value=[
-        df_landslide["event_date"].min().date(),
-        df_landslide["event_date"].max().date(),
-    ],
-    style={"width": "100%", "zIndex": 10},
-    className="datepicker",
+# TikTok
+tiktok = html.Div(
+    children=[
+        dcc.Link(
+            "Share on TikTok 🎵",
+            id="tiktok-share-button",
+            href="https://www.tiktok.com/",
+            target="_blank",
+            style={
+                "color": "white",
+                "text-decoration": "none",
+                "font-size": "20px",
+                "padding": "10px",
+            },
+        ),
+    ]
 )
+
+# # Date Picker Range
+# date_picker_label = dbc.Label("Date Range", className="control-label")
+# # doc: https://www.dash-mantine-components.com/components/datepicker
+# date_picker = dmc.DateRangePicker(
+#     id="datepickerrange",
+#     minDate=df_landslide["event_date"].min().date(),
+#     maxDate=df_landslide["event_date"].max().date(),
+#     value=[
+#         pd.to_datetime("2016-01-01").date(),
+#         pd.to_datetime("2016-12-31").date(),
+#     ],
+#     style={"width": "100%", "zIndex": 10},
+#     inputFormat="YYYY",
+#     className="datepicker",
+#     #allowLevelChange = False,
+#     #initialLevel = 'year',
+# )
+
+# Extract years from the dataset
+min_year = df_landslide["event_date"].min().year
+max_year = df_landslide["event_date"].max().year
+years = list(range(min_year, max_year + 1))
+
+# Date Picker
+date_picker_label = dbc.Label("Select Year", className="control-label")
+date_picker = dcc.Dropdown(
+    id="datepickerrange",
+    options=[{"label": year, "value": year} for year in years],
+    value=2017,
+    multi=False,
+    placeholder="Select a Year",
+    className="dropdown",
+    style={"color": "black", "width": "100%", "zIndex": 10},
+)
+
 
 date_store = dcc.Store(
     id="date-range-storage", data={"start_date": None, "end_date": None}
-)
-# Landslide Category
-landslide_cat_label = dbc.Label("Landslide Category", className="control-label")
-landslide_cat = dcc.Dropdown(
-    id="category-dropdown",
-    options=[
-        {"label": i, "value": i}
-        for i in df_landslide["landslide_category"].dropna().unique()
-    ],
-    value="rock_fall",
-    multi=True,
-    placeholder="Select Landslide Categories",
-    className="dropdown",
-    style={"color": "black", "width": "100%", "zIndex": 9},
 )
 
 # Landslide Trigger
@@ -93,7 +133,7 @@ landslide_trigger = dcc.Dropdown(
         {"label": i, "value": i}
         for i in df_landslide["landslide_trigger"].dropna().unique()
     ],
-    value="downpour",
+    value='downpour', #TODO change plus tard
     multi=True,
     placeholder="Select Landslide Triggers",
     className="dropdown",
@@ -128,9 +168,6 @@ picker = dbc.Card(
                 # Date Picker Range
                 dbc.Row([date_picker_label]),
                 dbc.Row([date_picker, date_store], class_name="mb-3"),
-                # Landslide Category
-                dbc.Row([landslide_cat_label]),
-                dbc.Row([landslide_cat], class_name="mb-3"),
                 # Landslide Trigger
                 dbc.Row([landslide_trigger_label]),
                 dbc.Row([landslide_trigger], class_name="mb-3"),
@@ -146,64 +183,32 @@ picker = dbc.Card(
 
 plots = dbc.Col(
     [
-        dbc.Row(
+        dbc.Col(
             [
-                dbc.Col(
-                    [
-                        # Pie chart
-                        dcc.Loading(
-                            id="loading-icon-pie",
-                            type="circle",
-                            children=[dcc.Graph(id="pie-chart")],
-                            style={"textAlign": "center"},
-                        )
-                    ],
-                    width={"size": 6},
-                ),
-                dbc.Col(
-                    [
-                        # Pie chart
-                        dcc.Loading(
-                            id="loading-icon-histogram",
-                            type="circle",
-                            children=[dcc.Graph(id="histogram")],
-                            style={"textAlign": "center"},
-                        )
-                    ],
-                    width={"size": 6},
-                ),
-            ]
+                # Landslide triggers pie chart
+                dcc.Loading(
+                    id="loading-icon-pie",
+                    type="circle",
+                    children=[dcc.Graph(id="pie-chart")],
+                    style={"textAlign": "center"},
+                )
+            ],
+            # width={"size": 6},
         ),
-        dbc.Row(
+        dbc.Col(
             [
-                dbc.Col(
-                    [
-                        # Pie chart
-                        dcc.Loading(
-                            id="loading-icon",
-                            type="circle",
-                            children=[dcc.Graph(id="bar-chart")],
-                            style={"textAlign": "center"},
-                        )
-                    ],
-                    width={"size": 6},
-                ),
-                dbc.Col(
-                    [
-                        # Pie chart
-                        dcc.Loading(
-                            id="loading-icon-histogram",
-                            type="circle",
-                            children=[dcc.Graph(id="histogram")],
-                            style={"textAlign": "center"},
-                        )
-                    ],
-                    width={"size": 6},
-                ),
-            ]
+                # Histogram of landslide triggers by year
+                dcc.Loading(
+                    id="loading-icon-histogram",
+                    type="circle",
+                    children=[dcc.Graph(id="histogram")],
+                    style={"textAlign": "center"},
+                )
+            ],
+            # width={"size": 6},
         ),
+
     ],
-    width=6,
     style={"height": "100vh"},
 )
 
@@ -227,7 +232,7 @@ map = html.Div(
             ],
             style={
                 "width": "100%",
-                "height": "350px",
+                "height": "500px",
                 "margin": "auto",
                 "display": "block",
                 "zIndex": 0,
@@ -242,29 +247,18 @@ map = html.Div(
         dcc.Loading(
             id="loading",
             type="circle",
-            children=[html.Div(id="loading-placeholder", hidden=True)],
-            style={
-                "position": "absolute",
-                "width": "100%",
-                "height": "350px",
-                "display": "flex",
-                "alignItems": "center",
-                "justifyContent": "center",
-                "zIndex": 1,
-            },
+            children=[html.Div(id="loading-placeholder", hidden=True)]
         ),
     ],
-    style={"position": "relative"},
+    style={"position": "relative", "transform": "scale(1)"},
 )
 
 
 landslide_info = html.Div(
     children=[
         html.Div(
-            [  # Not necessary as populated in callback, but makes it easier to visualize
-                html.H1(id="landslide-title"),
-                html.P(id="landslide-description"),
-                html.Img(id="landslide-image"),
+            [  # Returned in a callback below
+
             ],
             id="landslide-info",
             style={
@@ -277,19 +271,158 @@ landslide_info = html.Div(
     ]
 )
 
+map_tabs = dbc.Row(
+    dbc.Col(
+        [
+            map,
+            dcc.Tabs(
+                id="category-tabs",
+                value="rock_fall",
+                parent_className="custom-tabs",
+                className="custom-tabs-container",
+                style={
+                    "backgroundColor": "black"
+                },
+                children=[
+                    dcc.Tab(
+                        label="Land Slide",
+                        value="landslide",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Mud Slide",
+                        value="mudslide",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="River Bank Collapse",
+                        value="riverbank_collapse",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Lahar",
+                        value="lahar",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Debris Flow",
+                        value="debris_flow",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Rock Fall",
+                        value="rock_fall",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Complex",
+                        value="complex",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Snow avalanche",
+                        value="snow_avalanche",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Creep",
+                        value="creep",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Earth flow",
+                        value="earth_flow",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Translational Slide",
+                        value="translational_slide",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                    dcc.Tab(
+                        label="Topple",
+                        value="topple",
+                        className="custom-tab",
+                        selected_className="custom-tab--selected",
+                        style={
+                            "backgroundColor": "black"
+                        },
+                    ),
+                ],
+            ),
+        ],
+        width=12,
+    ),
+    justify="center",
+    align="center",
+    style={"height": "80vh"},
+)
+
+
+
 container = dbc.Container(
     [
         dbc.Row(
             [
-                dbc.Col([title, picker, map, twitter], width=3),
-                dbc.Col([landslide_info], width=3),
-                plots,
+                dbc.Col([title, picker, landslide_info,  
+                    html.Div(
+                    [
+                        twitter,
+                        tiktok,
+                    ]
+                )], width=3),
+                dbc.Col([map_tabs], width=6),
+                dbc.Col([plots], width=3),
             ]
         )
     ],
     fluid=True,
     style={
-        "background-image": "url(https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80)",
+        "background-image": "url(https://images.unsplash.com/photo-1502239608882-93b729c6af43?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80)",
         "background-repeat": "no-repeat",
         "background-position": "center",
         "background-size": "cover",
@@ -299,6 +432,10 @@ container = dbc.Container(
 )
 
 
+
+
+
+
 app.layout = container
 
 
@@ -306,76 +443,52 @@ app.layout = container
 global_filtered_df = None
 
 
-# Update the global filtered df at each callback
+# Update the global_filtered_df
 def update_global_filtered_df(
-    selected_value, date_value, selected_triggers, selected_sizes
+    selected_tab, date_value, selected_triggers, selected_sizes
 ):
     global global_filtered_df
-    data = df_landslide[
-        df_landslide["event_date"].between(
-            pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1])
-        )
-    ]
+    selected_year = int(date_value)  # Convert the selected year to integer
+    data = df_landslide[df_landslide["event_date"].dt.year == selected_year]
 
-    if selected_value:  # Only filter by category if selected_value is not None
-        if isinstance(selected_value, str):
-            selected_value = [selected_value]
-        filtered_df = data[data["landslide_category"].isin(selected_value)]
-    else:
-        filtered_df = data
-
-    # Filter by selected triggers
+    if selected_tab != "all":
+        data = data[data["landslide_category"] == selected_tab]
     if selected_triggers:
         if isinstance(selected_triggers, str):
             selected_triggers = [selected_triggers]
-        filtered_df = filtered_df[
-            filtered_df["landslide_trigger"].isin(selected_triggers)
-        ]
-
-    # Filter by selected sizes
+        data = data[data["landslide_trigger"].isin(selected_triggers)]
     if selected_sizes:
         if isinstance(selected_sizes, str):
             selected_sizes = [selected_sizes]
-        filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
-
-    global_filtered_df = filtered_df
+        data = data[data["landslide_size"].isin(selected_sizes)]
+    global_filtered_df = data
     global_filtered_df["fatality_count"] = global_filtered_df["fatality_count"].fillna(
         0
     )
-
-
-# Date range storage callback
-
-
-@app.callback(
-    dash.dependencies.Output("date-range-storage", "data"),
-    dash.dependencies.Input("datepickerrange", "value"),
-)
-def update_date_range_storage(date_value):
-    return {"start_date": date_value[0], "end_date": date_value[1]}
-
+    global_filtered_df["injury_count"] = global_filtered_df["injury_count"].fillna(
+        0
+    )
 
 # Map marker callback
 
 ZOOM_THRESHOLD = 10  # Adjust this value #TODO
 
-
 @functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @app.callback(
     Output("markers", "children"),
-    Input("category-dropdown", "value"),
     Input("datepickerrange", "value"),
     Input("trigger-dropdown", "value"),
     Input("size-dropdown", "value"),
+    Input("category-tabs", "value"),
     Input("map", "zoom"),  # Add the zoom level as an input
 )
 def update_figure(
-    selected_value, date_value, selected_triggers, selected_sizes, current_zoom
+    date_value, selected_triggers, selected_sizes, selected_tab, current_zoom
 ):
     update_global_filtered_df(
-        selected_value, date_value, selected_triggers, selected_sizes
+        selected_tab, date_value, selected_triggers, selected_sizes
     )
-    print(current_zoom)
+    print(global_filtered_df.shape[0])
     if current_zoom <= ZOOM_THRESHOLD:
         markers = [
             dl.Marker(
@@ -383,32 +496,32 @@ def update_figure(
                 position=[row["latitude"], row["longitude"]],
                 children=[
                     dl.Tooltip(row["event_title"]),
-                    dl.Popup(
-                        html.Div(
-                            [
-                                html.H3(
-                                    row["event_title"],
-                                    style={
-                                        "color": "darkblue",
-                                        "overflow-wrap": "break-word",
-                                    },
-                                ),
-                                html.P(
-                                    f"Date: {row['event_date'].strftime('%Y-%m-%d')}"
-                                ),
-                                html.P(f"Trigger: {row['landslide_trigger']}"),
-                                html.P(f"Size: {row['landslide_size']}"),
-                                html.P(f"Fatalities: {int(row['fatality_count'])}"),
-                                html.P(f"Source: {row['source_name']}"),
-                                html.A(
-                                    "Source URL",
-                                    href=row["source_link"],
-                                    target="_blank",
-                                ),
-                            ],
-                            style={"width": "300px", "white-space": "normal"},
-                        )
-                    ),
+                    # dl.Popup(
+                    #     html.Div(
+                    #         [
+                    #             html.H3(
+                    #                 row["event_title"],
+                    #                 style={
+                    #                     "color": "darkblue",
+                    #                     "overflow-wrap": "break-word",
+                    #                 },
+                    #             ),
+                    #             html.P(
+                    #                 f"Date: {row['event_date'].strftime('%Y-%m-%d')}"
+                    #             ),
+                    #             html.P(f"Trigger: {row['landslide_trigger']}"),
+                    #             html.P(f"Size: {row['landslide_size']}"),
+                    #             html.P(f"Fatalities: {int(row['fatality_count'])}"),
+                    #             html.P(f"Source: {row['source_name']}"),
+                    #             html.A(
+                    #                 "Source URL",
+                    #                 href=row["source_link"],
+                    #                 target="_blank",
+                    #             ),
+                    #         ],
+                    #         style={"width": "300px", "white-space": "normal"},
+                    #     )
+                    # ),
                 ],
             )
             for i, row in global_filtered_df.iterrows()
@@ -463,7 +576,7 @@ def update_tweet_text(clicked_marker_idx):
     source_name = row["source_name"]
     event_date = row["event_date"].strftime("%Y-%m-%d")
     tweet = (
-        f"{event_title} on {event_date} by {source_name}. #landslides #druids #Info-Vis"
+        f"{event_title} on {event_date} by {source_name}. #landslides #Info-Vis"
     )
     return tweet
 
@@ -478,13 +591,14 @@ def update_landslide_details(clicked_marker_idx):
         raise PreventUpdate
     row = global_filtered_df.iloc[clicked_marker_idx]
     img_link = row["photo_link"]
-    print(img_link)
     if img_link != img_link:  # if img_link is NaN
-        img_link = "https://i.pinimg.com/originals/77/49/3d/77493de0dd994f9a262ce0d85fe3c31d.gif"
+        img_link = "/assets/no_image.gif"
     print(row["photo_link"])
     return [
-        html.H1(row["event_title"], style={"color": "darkblue"}),
-        html.P(row["event_description"], style={"color": "blueviolet"}),
+        html.H1(row["event_title"], style={"font-size": 28, "color": "black"}),
+        html.H2(row['event_date'].strftime("%d %B %Y - %H:%M") + " (" + str(int(row['fatality_count'])) + " fatalities, " + str(int(row['injury_count'])) + " injuries)", style={"font-size": 12, "color": "#645a56"}),
+        html.P(row["event_description"], style={"font-size": 12, "color": "#645a56"}),
+        html.P(row["source_link"], style={"font-size": 12, "color": "#645a56"}),
         html.Img(src=img_link, style={"width": "100%"}),
     ]
 
@@ -499,14 +613,15 @@ def update_twitter_share_button(tweet_text):
     )
     return tweet_url
 
+@app.callback(Output("tiktok-share-button", "href"), Input("tweet-text", "value"))
+def update_tiktok_share_button(tiktok_text):
+    tiktok_url = f"https://www.tiktok.com/share?url={urllib.parse.quote(tiktok_text)}"
+    return tiktok_url
 
-# Callback updates the bar chart
 
-
-@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @app.callback(
-    Output("bar-chart", "figure"),
-    Input("category-dropdown", "value"),
+    Output("histogram", "figure"),
+    Input("category-tabs", "value"),
     Input("datepickerrange", "value"),
     Input("trigger-dropdown", "value"),
     Input("size-dropdown", "value"),
@@ -524,27 +639,30 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
             plot_bgcolor="#3E3E3E",
             paper_bgcolor="#3E3E3E",
         )
-    filtered_df["year"] = filtered_df["event_date"].dt.year
-    yearly_counts = filtered_df.groupby("year").size().reset_index(name="count")
-    fig = go.Figure(data=[go.Bar(x=yearly_counts["year"], y=yearly_counts["count"])])
+
+    filtered_df['month'] = filtered_df['event_date'].dt.to_period('M')
+    monthly_counts = filtered_df.groupby("month").agg({"injury_count": "sum", "fatality_count": "sum"}).reset_index()
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=monthly_counts["month"].astype(str), y=monthly_counts["injury_count"], name="injury_count"))
+    fig.add_trace(go.Bar(x=monthly_counts["month"].astype(str), y=monthly_counts["fatality_count"], name="fatality_count"))
+    
     fig.update_layout(
-        title=f"Landslides per Year for {selected_value}",
-        xaxis_title="Year",
-        yaxis_title="Number of Landslides",
+        title=f"Injuries and Fatalities per Month for {selected_value}",
+        xaxis_title="Month",
+        yaxis_title="Number of Injuries and Fatalities",
         font=dict(color="#CFCFCF"),
         plot_bgcolor="#3E3E3E",
         paper_bgcolor="#3E3E3E",
+        barmode="group",
     )
     return fig
 
-
 # Pie chart callback
-
-
 @functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @app.callback(
     Output("pie-chart", "figure"),
-    Input("category-dropdown", "value"),
+    Input("category-tabs", "value"),
     Input("datepickerrange", "value"),
     Input("trigger-dropdown", "value"),
     Input("size-dropdown", "value"),
@@ -572,33 +690,34 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
 # Histogram callback
 
 
-@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
-@app.callback(
-    Output("histogram", "figure"),
-    Input("category-dropdown", "value"),
-    Input("datepickerrange", "value"),
-    Input("trigger-dropdown", "value"),
-    Input("size-dropdown", "value"),
-)
-def update_histogram(selected_value, date_value, selected_triggers, selected_sizes):
-    update_global_filtered_df(
-        selected_value, date_value, selected_triggers, selected_sizes
-    )
-    global global_filtered_df
-    filtered_df = global_filtered_df
+# @functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
+# @app.callback(
+#     Output("histogram", "figure"),
+#     Input("category-tabs", "value"),
+#     Input("datepickerrange", "value"),
+#     Input("trigger-dropdown", "value"),
+#     Input("size-dropdown", "value"),
+# )
+# def update_histogram(selected_value, date_value, selected_triggers, selected_sizes):
+#     update_global_filtered_df(
+#         selected_value, date_value, selected_triggers, selected_sizes
+#     )
+#     global global_filtered_df
+#     filtered_df = global_filtered_df
 
-    fig = px.histogram(
-        filtered_df,
-        x="landslide_trigger",
-        y="event_date",
-        nbins=10,
-        title="Histogram of Landslide Triggers by Year",
-    )
-    fig.update_layout(
-        font=dict(color="#CFCFCF"), plot_bgcolor="#3E3E3E", paper_bgcolor="#3E3E3E"
-    )
-    return fig
+#     fig = px.histogram(
+#         filtered_df,
+#         x="landslide_trigger",
+#         y="event_date",
+#         nbins=10,
+#         title="Histogram of Landslide Triggers by Year",
+#     )
+#     fig.update_layout(
+#         font=dict(color="#CFCFCF"), plot_bgcolor="#3E3E3E", paper_bgcolor="#3E3E3E"
+#     )
+#     return fig
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    # TODO add back debug=True
+    app.run_server(debug=False)
