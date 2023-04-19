@@ -281,6 +281,45 @@ app.layout = container
 # TODO MAKE THEM ALL USE THE global_filtered_df VARIABLE
 global_filtered_df = None
 
+
+# Update the global filtered df at each callback
+def update_global_filtered_df(
+    selected_value, date_value, selected_triggers, selected_sizes
+):
+    global global_filtered_df
+    data = df_landslide[
+        df_landslide["event_date"].between(
+            pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1])
+        )
+    ]
+
+    if selected_value:  # Only filter by category if selected_value is not None
+        if isinstance(selected_value, str):
+            selected_value = [selected_value]
+        filtered_df = data[data["landslide_category"].isin(selected_value)]
+    else:
+        filtered_df = data
+
+    # Filter by selected triggers
+    if selected_triggers:
+        if isinstance(selected_triggers, str):
+            selected_triggers = [selected_triggers]
+        filtered_df = filtered_df[
+            filtered_df["landslide_trigger"].isin(selected_triggers)
+        ]
+
+    # Filter by selected sizes
+    if selected_sizes:
+        if isinstance(selected_sizes, str):
+            selected_sizes = [selected_sizes]
+        filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
+
+    global_filtered_df = filtered_df
+    global_filtered_df["fatality_count"] = global_filtered_df["fatality_count"].fillna(
+        0
+    )
+
+
 # Date range storage callback
 
 
@@ -294,7 +333,7 @@ def update_date_range_storage(date_value):
 
 # Map marker callback
 
-ZOOM_THRESHOLD = 4  # Adjust this value #TODO
+ZOOM_THRESHOLD = 10  # Adjust this value #TODO
 
 
 @functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
@@ -309,37 +348,10 @@ ZOOM_THRESHOLD = 4  # Adjust this value #TODO
 def update_figure(
     selected_value, date_value, selected_triggers, selected_sizes, current_zoom
 ):
-    global global_filtered_df
-
-    data = df_landslide[
-        df_landslide["event_date"].between(
-            pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1])
-        )
-    ]
-
-    if selected_value:  # Only filter by category if selected_value is not None
-        if isinstance(selected_value, str):
-            selected_value = [selected_value]
-        if isinstance(selected_triggers, str):
-            selected_triggers = [selected_triggers]
-        if isinstance(selected_sizes, str):
-            selected_sizes = [selected_sizes]
-        filtered_df = data[data["landslide_category"].isin(selected_value)]
-    else:
-        filtered_df = data
-
-    # Filter by selected triggers
-    if selected_triggers:
-        filtered_df = filtered_df[
-            filtered_df["landslide_trigger"].isin(selected_triggers)
-        ]
-    # Filter by selected sizes
-    if selected_sizes:
-        filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
-    global_filtered_df = filtered_df
-    global_filtered_df["fatality_count"] = global_filtered_df["fatality_count"].fillna(
-        0
+    update_global_filtered_df(
+        selected_value, date_value, selected_triggers, selected_sizes
     )
+    global global_filtered_df
     print(current_zoom)
     if current_zoom <= ZOOM_THRESHOLD:
         markers = [
@@ -472,30 +484,11 @@ def update_twitter_share_button(tweet_text):
     Input("size-dropdown", "value"),
 )
 def update_bar_chart(selected_value, date_value, selected_triggers, selected_sizes):
-    data = df_landslide[
-        df_landslide["event_date"].between(
-            pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1])
-        )
-    ]
-
-    if selected_value:
-        if isinstance(selected_value, str):
-            selected_value = [selected_value]
-        filtered_df = data[data["landslide_category"].isin(selected_value)]
-    else:
-        filtered_df = data
-    # Filter by selected triggers
-    if selected_triggers:
-        if isinstance(selected_triggers, str):
-            selected_triggers = [selected_triggers]
-        filtered_df = filtered_df[
-            filtered_df["landslide_trigger"].isin(selected_triggers)
-        ]
-    # Filter by selected sizes
-    if selected_sizes:
-        if isinstance(selected_sizes, str):
-            selected_sizes = [selected_sizes]
-        filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
+    update_global_filtered_df(
+        selected_value, date_value, selected_triggers, selected_sizes
+    )
+    global global_filtered_df
+    filtered_df = global_filtered_df
     if filtered_df.empty:
         return go.Figure().update_layout(
             title=f"No data for selected filters",
@@ -529,31 +522,13 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
     Input("size-dropdown", "value"),
 )
 def update_pie_chart(selected_value, date_value, selected_triggers, selected_sizes):
-    data = df_landslide[
-        df_landslide["event_date"].between(
-            pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1])
-        )
-    ]
+    update_global_filtered_df(
+        selected_value, date_value, selected_triggers, selected_sizes
+    )
 
-    if selected_value:
-        if isinstance(selected_value, str):
-            selected_value = [selected_value]
-        filtered_df = data[data["landslide_category"].isin(selected_value)]
-    else:
-        filtered_df = data
+    global global_filtered_df
+    filtered_df = global_filtered_df
 
-    # Filter by selected triggers
-    if selected_triggers:
-        if isinstance(selected_triggers, str):
-            selected_triggers = [selected_triggers]
-        filtered_df = filtered_df[
-            filtered_df["landslide_trigger"].isin(selected_triggers)
-        ]
-    # Filter by selected sizes
-    if selected_sizes:
-        if isinstance(selected_sizes, str):
-            selected_sizes = [selected_sizes]
-        filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
     pie_data = filtered_df["landslide_trigger"].value_counts()
     fig = px.pie(
         pie_data,
@@ -579,29 +554,13 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
     Input("size-dropdown", "value"),
 )
 def update_histogram(selected_value, date_value, selected_triggers, selected_sizes):
-    data = df_landslide[
-        df_landslide["event_date"].between(
-            pd.Timestamp(date_value[0]), pd.Timestamp(date_value[1])
-        )
-    ]
-    if selected_value:
-        if isinstance(selected_value, str):
-            selected_value = [selected_value]
+    update_global_filtered_df(
+        selected_value, date_value, selected_triggers, selected_sizes
+    )
 
-    filtered_df = data[data["landslide_category"].isin(selected_value)]
+    global global_filtered_df
+    filtered_df = global_filtered_df
 
-    # Filter by selected triggers
-    if selected_triggers:
-        if isinstance(selected_triggers, str):
-            selected_triggers = [selected_triggers]
-        filtered_df = filtered_df[
-            filtered_df["landslide_trigger"].isin(selected_triggers)
-        ]
-    # Filter by selected sizes
-    if selected_sizes:
-        if isinstance(selected_sizes, str):
-            selected_sizes = [selected_sizes]
-        filtered_df = filtered_df[filtered_df["landslide_size"].isin(selected_sizes)]
     fig = px.histogram(
         filtered_df,
         x="landslide_trigger",
