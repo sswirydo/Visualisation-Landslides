@@ -27,7 +27,8 @@ df_landslide = pd.read_csv("./data/Global_Landslide_Catalog_Export.csv", parse_d
 # Preprocess dataframes
 df_landslide = preprocess.preprocess(df_landslide)
 
-title = html.H1(children="⛰️ Landslides 🏞️", className="title")
+title = html.H1(children="⛰️ Landslides  Explorer🔎", className="title", style={"margin": "3%"},
+)
 
 # Get a list of unique landslide categories
 categories = df_landslide["landslide_category"].unique()
@@ -178,6 +179,7 @@ picker = dbc.Card(
             ]
         ),
     ],
+    style={"margin-top": "5%"},
     className="mb-4",
 )
 
@@ -293,6 +295,7 @@ tab_selected_style = {
 map_tabs = dbc.Row(
     dbc.Col(
         [
+            title,
             map,
             dcc.Tabs(
                 id="category-tabs",
@@ -418,7 +421,7 @@ map_tabs = dbc.Row(
     ),
     justify="center",
     align="center",
-    style={"height": "80vh"},
+    #style={"height": "80%"},
 )
 
 
@@ -427,13 +430,13 @@ container = dbc.Container(
     [
         dbc.Row(
             [
-                dbc.Col([title, picker, landslide_info,  
+                dbc.Col([picker, landslide_info,  
                     html.Div(
                     [
                         twitter,
                         tiktok,
                     ]
-                )], width=3),
+                ),], width=3),
                 dbc.Col([map_tabs], width=6),
                 dbc.Col([plots], width=3),
             ]
@@ -446,7 +449,7 @@ container = dbc.Container(
         "background-position": "center",
         "background-size": "cover",
         "width": "100%",
-        "max-height": "100vh",
+        "max-height": "100vh"
     },
 )
 
