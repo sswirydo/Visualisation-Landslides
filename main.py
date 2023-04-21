@@ -217,7 +217,7 @@ map = html.Div(
     children=[
         dl.Map(
             [
-                dl.TileLayer(),
+                dl.TileLayer(url = "https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=ecc291031e064ce28fe61975dd9c1631"),
                 dl.MarkerClusterGroup(
                     html.Div(id="placeholder", hidden=True),
                     id="markers",
