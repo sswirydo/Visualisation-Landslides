@@ -271,13 +271,22 @@ landslide_info = html.Div(
 
 tab_style = {
     "backgroundColor": "black",
-    'padding': '4px',
+    'margin-left': '4px',
+    'margin-right': '4px',
+    'padding-top': '4px',    
+    'padding-bottom': '4px',    
     'fontWeight': 'bold',
-    'border': '3px white solid'
+    'font-size': '18px',
+    'border': 'none'
 }
 tab_selected_style = {
-    'padding': '4px',
-    'border': '3px solid white'
+    'margin-left': '4px',
+    'margin-right': '4px',
+    'padding-top': '4px',    
+    'padding-bottom': '4px',    
+    'fontWeight': 'bold',
+    'font-size': '18px',
+    'border': 'none !important'
 
 }
 
@@ -293,7 +302,8 @@ map_tabs = dbc.Row(
                 className="custom-tabs-container",
                 style={
                     'display': 'inline-block',
-                    'padding': '0px 3px 0px 0px',
+                    'border': 'none !important'
+
                 },
                 children=[
                     dcc.Tab(
