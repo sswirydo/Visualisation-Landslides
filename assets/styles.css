@@ -70,4 +70,12 @@
     color: #8C8C8C;
 }
 
+.custom-tab {
+  border-bottom: 2px solid #d6d6d6 !important;
+  border-top: 2px solid #d6d6d6!important;
+  border-right: 2px solid #d6d6d6 !important;
+  border-left: 2px solid #d6d6d6 !important;
+
+}
+
   

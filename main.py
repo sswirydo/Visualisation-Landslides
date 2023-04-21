@@ -17,7 +17,7 @@ import preprocess
 app = dash.Dash(
     __name__,
     title="Landslides",
-    external_stylesheets=[dbc.themes.DARKLY, "./assets/styles.css"],
+    external_stylesheets=[dbc.themes.DARKLY, "assets/styles.css"],
 )
 
 print("###### RESTART #######")
@@ -269,6 +269,18 @@ landslide_info = html.Div(
     ]
 )
 
+tab_style = {
+    "backgroundColor": "black",
+    'padding': '4px',
+    'fontWeight': 'bold',
+    'border': '3px white solid'
+}
+tab_selected_style = {
+    'padding': '4px',
+    'border': '3px solid white'
+
+}
+
 map_tabs = dbc.Row(
     dbc.Col(
         [
@@ -277,9 +289,11 @@ map_tabs = dbc.Row(
                 id="category-tabs",
                 value="rock_fall",
                 parent_className="custom-tabs",
+                vertical=True,
                 className="custom-tabs-container",
                 style={
-                    "backgroundColor": "black"
+                    'display': 'inline-block',
+                    'padding': '0px 3px 0px 0px',
                 },
                 children=[
                     dcc.Tab(
@@ -287,110 +301,107 @@ map_tabs = dbc.Row(
                         value="landslide",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
                     ),
                     dcc.Tab(
                         label="Mud Slide",
                         value="mudslide",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
                     ),
                     dcc.Tab(
                         label="River Bank Collapse",
                         value="riverbank_collapse",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Lahar",
                         value="lahar",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Debris Flow",
                         value="debris_flow",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Rock Fall",
                         value="rock_fall",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Complex",
                         value="complex",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Snow avalanche",
                         value="snow_avalanche",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Creep",
                         value="creep",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
                     ),
                     dcc.Tab(
                         label="Earth flow",
                         value="earth_flow",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Translational Slide",
                         value="translational_slide",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
                     dcc.Tab(
                         label="Topple",
                         value="topple",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
-                        style={
-                            "backgroundColor": "black"
-                        },
+                        style=tab_style,
+                        selected_style=tab_selected_style
+
                     ),
-                ],
+                ]
             ),
         ],
         width=12,
