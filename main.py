@@ -189,11 +189,10 @@ plots = dbc.Col(
                 dcc.Loading(
                     id="loading-icon-pie",
                     type="circle",
-                    children=[dcc.Graph(id="pie-chart")],
+                    children=[dcc.Graph(id="pie-chart", style={ 'border-top-left-radius':'15px', 'border-top-right-radius':'15px', 'background-color':'#3E3E3E'})],
                     style={"textAlign": "center"},
                 )
             ],
-            # width={"size": 6},
         ),
         dbc.Col(
             [
@@ -201,15 +200,14 @@ plots = dbc.Col(
                 dcc.Loading(
                     id="loading-icon-histogram",
                     type="circle",
-                    children=[dcc.Graph(id="histogram")],
+                    children=[dcc.Graph(id="histogram", style={'border-bottom-left-radius':'15px', 'border-bottom-right-radius':'15px', 'background-color':'#3E3E3E'})],
                     style={"textAlign": "center"},
                 )
             ],
-            # width={"size": 6},
         ),
 
     ],
-    style={"height": "100vh"},
+    style={"height": "100vh", "padding-top": "5%",  "border-radius": "15px"},
 )
 
 
@@ -637,7 +635,7 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
             title=f"No data for selected filters",
             font=dict(color="#CFCFCF"),
             plot_bgcolor="#3E3E3E",
-            paper_bgcolor="#3E3E3E",
+            paper_bgcolor='rgba(0,0,0,0)',
         )
 
     filtered_df['month'] = filtered_df['event_date'].dt.to_period('M')
@@ -653,7 +651,7 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
         yaxis_title="Number of Injuries and Fatalities",
         font=dict(color="#CFCFCF"),
         plot_bgcolor="#3E3E3E",
-        paper_bgcolor="#3E3E3E",
+        paper_bgcolor='rgba(0,0,0,0)',
         barmode="group",
     )
     return fig
@@ -682,7 +680,7 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
         title="Landslide Triggers",
     )
     fig.update_layout(
-        font=dict(color="#CFCFCF"), plot_bgcolor="#3E3E3E", paper_bgcolor="#3E3E3E"
+        font=dict(color="#CFCFCF"),  paper_bgcolor='rgba(0,0,0,0)'
     )
     return fig
 
