@@ -54,7 +54,7 @@ categories = df_landslide["landslide_category"].unique()
 # Create a tab for each category
 tabs = [dcc.Tab(label=category, value=category) for category in categories]
 
-details_tab_title = html.H4(id="details_tab", children="ℹ️ Details", className="detailstab", style={"margin": "3%"})
+details_tab_title = html.H4(id="details_tab", children="ℹ️ Did you know?", className="detailstab", style={"margin": "3%"})
 details_tab = html.H6(id="details_tab", children="", className="detailstab", style={"margin": "3%"})
 # Create the tabs component
 tablist = dcc.Tabs(
@@ -235,43 +235,45 @@ plots = dbc.Col(
 
 map = html.Div(
     children=[
-        dl.Map(
-            [
-                dl.TileLayer(url = "https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=ecc291031e064ce28fe61975dd9c1631"),
-                dl.MarkerClusterGroup(
-                    html.Div(id="placeholder", hidden=True),
-                    id="markers",
-                    options={"chunkedLoading": True, "chunkInterval": 200},
-                ),
-                html.Div(id="clicked-marker-index", hidden=True),
-                html.Div(
-                    id="prev-marker-clicks",
-                    hidden=True,
-                    children=[0] * len(df_landslide),
-                ),
-            ],
-            style={
-                "width": "100%",
-                "height": "500px",
-                "margin": "auto",
-                "display": "block",
-                "zIndex": 0,
-            },
-            center=[51.5074, -0.1278],
-            bounds=[[-45, -90], [45, 90]],
-            maxBounds=[[-90, -180], [90, 180]],
-            maxBoundsViscosity=1.0,
-            zoom=10,
-            id="map",
-        ),
         dcc.Loading(
             id="loading",
             type="circle",
-            children=[html.Div(id="loading-placeholder", hidden=True)]
+            children=[
+                dl.Map(
+                    [
+                        dl.TileLayer(url = "https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=ecc291031e064ce28fe61975dd9c1631"),
+                        dl.MarkerClusterGroup(
+                            html.Div(id="placeholder", hidden=True),
+                            id="markers",
+                            options={"chunkedLoading": True, "chunkInterval": 200},
+                        ),
+                        html.Div(id="clicked-marker-index", hidden=True),
+                        html.Div(
+                            id="prev-marker-clicks",
+                            hidden=True,
+                            children=[0] * len(df_landslide),
+                        ),
+                    ],
+                    style={
+                        "width": "100%",
+                        "height": "500px",
+                        "margin": "auto",
+                        "display": "block",
+                        "zIndex": 0,
+                    },
+                    center=[51.5074, -0.1278],
+                    bounds=[[-45, -90], [45, 90]],
+                    maxBounds=[[-90, -180], [90, 180]],
+                    maxBoundsViscosity=1.0,
+                    zoom=10,
+                    id="map",
+                ),
+            ],
         ),
     ],
     style={"position": "relative", "transform": "scale(1)"},
 )
+
 
 
 landslide_info = html.Div(
@@ -464,7 +466,9 @@ container = dbc.Container(
                 dbc.Col([map_tabs], width=6),
                 dbc.Col([plots], width=3),
             ]
-        )
+        ),
+        # Add a hidden div for intermediate value storage
+        dcc.Store(id="intermediate-value"),
     ],
     fluid=True,
     style={
@@ -476,10 +480,6 @@ container = dbc.Container(
         "max-height": "100vh"
     },
 )
-
-
-
-
 
 
 app.layout = container
@@ -529,67 +529,38 @@ def update_global_filtered_df(
         0
     )
 
-
-
-# Map marker callback
-
-ZOOM_THRESHOLD = 10  # Adjust this value #TODO
-
-@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @app.callback(
-    Output("markers", "children"),
+    Output("intermediate-value", "data"),
     Input("datepickerrange", "value"),
     Input("trigger-dropdown", "value"),
     Input("size-dropdown", "value"),
     Input("category-tabs", "value"),
-    Input("map", "zoom"),  # Add the zoom level as an input
 )
 def update_figure(
-    dates, selected_triggers, selected_sizes, selected_tab, current_zoom
+    dates, selected_triggers, selected_sizes, selected_tab
 ):
     update_global_filtered_df(
         selected_tab, dates, selected_triggers, selected_sizes
     )
-    print(global_filtered_df.shape[0])
-    if current_zoom <= ZOOM_THRESHOLD:
-        markers = [
-            dl.Marker(
-                id={"type": "marker", "index": i},
-                position=[row["latitude"], row["longitude"]],
-                children=[
-                    dl.Tooltip(row["event_title"]),
-                    # dl.Popup(
-                    #     html.Div(
-                    #         [
-                    #             html.H3(
-                    #                 row["event_title"],
-                    #                 style={
-                    #                     "color": "darkblue",
-                    #                     "overflow-wrap": "break-word",
-                    #                 },
-                    #             ),
-                    #             html.P(
-                    #                 f"Date: {row['event_date'].strftime('%Y-%m-%d')}"
-                    #             ),
-                    #             html.P(f"Trigger: {row['landslide_trigger']}"),
-                    #             html.P(f"Size: {row['landslide_size']}"),
-                    #             html.P(f"Fatalities: {int(row['fatality_count'])}"),
-                    #             html.P(f"Source: {row['source_name']}"),
-                    #             html.A(
-                    #                 "Source URL",
-                    #                 href=row["source_link"],
-                    #                 target="_blank",
-                    #             ),
-                    #         ],
-                    #         style={"width": "300px", "white-space": "normal"},
-                    #     )
-                    # ),
-                ],
-            )
-            for i, row in global_filtered_df.iterrows()
-        ]
-    else:
-        return []
+    print('UPDATE ----')
+    return global_filtered_df.to_json(date_format="iso", orient="split")
+
+@app.callback(
+    Output("markers", "children"),
+    Input("intermediate-value", "data"),
+)
+def update_markers(jsonified_global_filtered_df):
+    global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
+    markers = [
+        dl.Marker(
+            id={"type": "marker", "index": i},
+            position=[row["latitude"], row["longitude"]],
+            children=[
+                dl.Tooltip(row["event_title"]),
+            ],
+        )
+        for i, row in global_filtered_df.iterrows()
+    ]
     return markers
 
 
@@ -683,11 +654,9 @@ def update_landslide_details(clicked_marker_idx):
     img_link = row["photo_link"]
     if img_link != img_link:  # if img_link is NaN
         img_link = "/assets/no_image.gif"
-    print(row["photo_link"])
     show_more = False
     event_description = html.P(row["event_description"], style={"font-size": 12, "color": "#645a56"})
     if (len(row["event_description"]) > 300):
-        print(row["event_description"])
         show_more = dbc.Button("Show More", id="open")
         event_description = html.P(row["event_description"][:300] + "...", style={"font-size": 12, "color": "#645a56"})
 
@@ -719,16 +688,10 @@ def update_tiktok_share_button(tiktok_text):
 
 @app.callback(
     Output("histogram", "figure"),
-    Input("category-tabs", "value"),
-    Input("datepickerrange", "value"),
-    Input("trigger-dropdown", "value"),
-    Input("size-dropdown", "value"),
+    Input("intermediate-value", "data")
 )
-def update_bar_chart(selected_value, dates, selected_triggers, selected_sizes):
-    update_global_filtered_df(
-        selected_value, dates, selected_triggers, selected_sizes
-    )
-    global global_filtered_df
+def update_bar_chart(jsonified_global_filtered_df):
+    global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
     filtered_df = global_filtered_df
     if filtered_df.empty:
         return go.Figure().update_layout(
@@ -737,6 +700,7 @@ def update_bar_chart(selected_value, dates, selected_triggers, selected_sizes):
             plot_bgcolor="#3E3E3E",
             paper_bgcolor='rgba(0,0,0,0)',
         )
+    filtered_df['event_date'] = pd.to_datetime(filtered_df['event_date'])
     filtered_df['month'] = filtered_df['event_date'].dt.to_period('M')
     monthly_counts = filtered_df.groupby("month").agg({"injury_count": "sum", "fatality_count": "sum"}).reset_index()
     fig = go.Figure()
@@ -744,7 +708,7 @@ def update_bar_chart(selected_value, dates, selected_triggers, selected_sizes):
     fig.add_trace(go.Bar(x=monthly_counts["month"].astype(str), y=monthly_counts["fatality_count"], name="fatality_count"))
     
     fig.update_layout(
-        title=f"Injuries and Fatalities per Month for {selected_value}",
+        title=f"Injuries and Fatalities per Month for {filtered_df['landslide_category'].unique()}",
         xaxis_title="Month",
         yaxis_title="Number of Injuries and Fatalities",
         font=dict(color="#CFCFCF"),
@@ -755,19 +719,12 @@ def update_bar_chart(selected_value, dates, selected_triggers, selected_sizes):
     return fig
 
 # Pie chart callback
-@functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
 @app.callback(
     Output("pie-chart", "figure"),
-    Input("category-tabs", "value"),
-    Input("datepickerrange", "value"),
-    Input("trigger-dropdown", "value"),
-    Input("size-dropdown", "value"),
+    Input("intermediate-value", "data"),
 )
-def update_pie_chart(selected_value, dates, selected_triggers, selected_sizes):
-    update_global_filtered_df(
-        selected_value, dates, selected_triggers, selected_sizes
-    )
-    global global_filtered_df
+def update_pie_chart(jsonified_global_filtered_df):
+    global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
     filtered_df = global_filtered_df
 
     pie_data = filtered_df["landslide_trigger"].value_counts()
