@@ -63,6 +63,8 @@ twitter = html.Div(
                 "text-decoration": "none",
                 "font-size": "20px",
                 "padding": "10px",
+                'float': 'left',
+                'margin': 'auto'
             },
         ),
     ]
@@ -81,6 +83,8 @@ tiktok = html.Div(
                 "text-decoration": "none",
                 "font-size": "20px",
                 "padding": "10px",
+                'float': 'right',
+                'margin': 'auto'
             },
         ),
     ]
@@ -435,7 +439,8 @@ container = dbc.Container(
                     [
                         twitter,
                         tiktok,
-                    ]
+                    ], 
+
                 ),], width=3),
                 dbc.Col([map_tabs], width=6),
                 dbc.Col([plots], width=3),
@@ -616,10 +621,18 @@ def update_landslide_details(clicked_marker_idx):
     if img_link != img_link:  # if img_link is NaN
         img_link = "/assets/no_image.gif"
     print(row["photo_link"])
+    show_more = False
+    event_description = html.P(row["event_description"], style={"font-size": 12, "color": "#645a56"})
+    if (len(row["event_description"]) > 300):
+        print(row["event_description"])
+        show_more = dbc.Button("Show More", id="open")
+        event_description = html.P(row["event_description"][:300] + "...", style={"font-size": 12, "color": "#645a56"})
+
     return [
         html.H1(row["event_title"], style={"font-size": 28, "color": "black"}),
         html.H2(row['event_date'].strftime("%d %B %Y - %H:%M") + " (" + str(int(row['fatality_count'])) + " fatalities, " + str(int(row['injury_count'])) + " injuries)", style={"font-size": 12, "color": "#645a56"}),
-        html.P(row["event_description"], style={"font-size": 12, "color": "#645a56"}),
+        event_description,
+        show_more,
         html.P(row["source_link"], style={"font-size": 12, "color": "#645a56"}),
         html.Img(src=img_link, style={"width": "100%"}),
     ]
