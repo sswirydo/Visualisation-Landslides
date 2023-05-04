@@ -116,15 +116,29 @@ max_year = df_landslide["event_date"].max().year
 years = list(range(min_year, max_year + 1))
 
 # Date Picker
-date_picker_label = dbc.Label("Select Year", className="control-label")
-date_picker = dcc.Dropdown(
+# date_picker_label = dbc.Label("Select Year", className="control-label")
+# date_picker = dcc.Dropdown(
+#     id="datepickerrange",
+#     options=[{"label": year, "value": year} for year in years],
+#     value=2017,
+#     multi=False,
+#     placeholder="Select a Year",
+#     className="dropdown",
+#     style={"color": "black", "width": "100%", "zIndex": 10},
+# )
+
+date_picker_label = dbc.Label("Select Year Range", className="control-label")
+date_picker = dcc.RangeSlider(
     id="datepickerrange",
-    options=[{"label": year, "value": year} for year in years],
-    value=2017,
-    multi=False,
-    placeholder="Select a Year",
-    className="dropdown",
-    style={"color": "black", "width": "100%", "zIndex": 10},
+    min=min_year,
+    max=max_year,
+    step=1,
+    value=[2016, 2017],
+    #marks={year: str(year) for year in range(min_year, max_year + 1)},
+    marks={min_year: str(min_year),
+           max_year: str(max_year) },
+    className="slider",
+    tooltip={"placement": "bottom", "always_visible": True}
 )
 
 
@@ -477,10 +491,9 @@ global_filtered_df = None
 
 # Update the global_filtered_df
 def update_global_filtered_df(
-    selected_tab, date_value, selected_triggers, selected_sizes
+    selected_tab, dates, selected_triggers, selected_sizes
 ):
     global global_filtered_df
-    selected_year = int(date_value)  # Convert the selected year to integer
     
     # Get all triggers for the selected category if no triggers are selected
     if not selected_triggers:
@@ -489,19 +502,25 @@ def update_global_filtered_df(
     # If selected_triggers is a string, convert it to a list
     if isinstance(selected_triggers, str):
         selected_triggers = [selected_triggers]
-    data = pd.DataFrame()
-    for trigger in selected_triggers:
-        try:
-            temp_df = dataframes_by_category_trigger_year[selected_tab][trigger][selected_year]
-            data = pd.concat([data, temp_df])
-        except Exception as e:
-            print(f"Error while processing trigger '{trigger}': {e}")
     
+    data = pd.DataFrame()
+    start_date = dates[0]
+    end_date = dates[1]
+    for trigger in selected_triggers:
+        for year, temp_df in dataframes_by_category_trigger_year[selected_tab][trigger].items():
+            try:
+                if start_date <= year <= end_date:
+                    data = pd.concat([data, temp_df])
+            except Exception as e:
+                print(f"Error while processing trigger '{trigger}': {e}")
+
     if selected_sizes:
         if isinstance(selected_sizes, str):
             selected_sizes = [selected_sizes]
         data = data[data["landslide_size"].isin(selected_sizes)]
 
+    # Filter the data based on the start_date and end_date
+    #data = data[(data['event_date'] >= start_date) & (data['event_date'] <= end_date)]
     global_filtered_df = data
     global_filtered_df["fatality_count"] = global_filtered_df["fatality_count"].fillna(
         0
@@ -509,6 +528,7 @@ def update_global_filtered_df(
     global_filtered_df["injury_count"] = global_filtered_df["injury_count"].fillna(
         0
     )
+
 
 
 # Map marker callback
@@ -525,10 +545,10 @@ ZOOM_THRESHOLD = 10  # Adjust this value #TODO
     Input("map", "zoom"),  # Add the zoom level as an input
 )
 def update_figure(
-    date_value, selected_triggers, selected_sizes, selected_tab, current_zoom
+    dates, selected_triggers, selected_sizes, selected_tab, current_zoom
 ):
     update_global_filtered_df(
-        selected_tab, date_value, selected_triggers, selected_sizes
+        selected_tab, dates, selected_triggers, selected_sizes
     )
     print(global_filtered_df.shape[0])
     if current_zoom <= ZOOM_THRESHOLD:
@@ -630,9 +650,6 @@ def update_tab_details(selected_tab):
         return wikipedia.summary(selected_tab)
 
 
-
-
-
 # Add a callback to update the tweet text
 
 
@@ -707,9 +724,9 @@ def update_tiktok_share_button(tiktok_text):
     Input("trigger-dropdown", "value"),
     Input("size-dropdown", "value"),
 )
-def update_bar_chart(selected_value, date_value, selected_triggers, selected_sizes):
+def update_bar_chart(selected_value, dates, selected_triggers, selected_sizes):
     update_global_filtered_df(
-        selected_value, date_value, selected_triggers, selected_sizes
+        selected_value, dates, selected_triggers, selected_sizes
     )
     global global_filtered_df
     filtered_df = global_filtered_df
@@ -720,10 +737,8 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
             plot_bgcolor="#3E3E3E",
             paper_bgcolor='rgba(0,0,0,0)',
         )
-
     filtered_df['month'] = filtered_df['event_date'].dt.to_period('M')
     monthly_counts = filtered_df.groupby("month").agg({"injury_count": "sum", "fatality_count": "sum"}).reset_index()
-    
     fig = go.Figure()
     fig.add_trace(go.Bar(x=monthly_counts["month"].astype(str), y=monthly_counts["injury_count"], name="injury_count"))
     fig.add_trace(go.Bar(x=monthly_counts["month"].astype(str), y=monthly_counts["fatality_count"], name="fatality_count"))
@@ -748,9 +763,9 @@ def update_bar_chart(selected_value, date_value, selected_triggers, selected_siz
     Input("trigger-dropdown", "value"),
     Input("size-dropdown", "value"),
 )
-def update_pie_chart(selected_value, date_value, selected_triggers, selected_sizes):
+def update_pie_chart(selected_value, dates, selected_triggers, selected_sizes):
     update_global_filtered_df(
-        selected_value, date_value, selected_triggers, selected_sizes
+        selected_value, dates, selected_triggers, selected_sizes
     )
     global global_filtered_df
     filtered_df = global_filtered_df
