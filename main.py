@@ -13,6 +13,7 @@ from dash.exceptions import PreventUpdate
 import functools
 import dash_mantine_components as dmc
 import preprocess
+import wikipedia
 
 app = dash.Dash(
     __name__,
@@ -26,6 +27,23 @@ df_landslide = pd.read_csv("./data/Global_Landslide_Catalog_Export.csv", parse_d
 
 # Preprocess dataframes
 df_landslide = preprocess.preprocess(df_landslide)
+landslide_categories = df_landslide['landslide_category'].unique()
+dataframes_by_category_trigger_year = {}
+
+for category in landslide_categories:
+    dataframes_by_category_trigger_year[category] = {}
+    category_df = df_landslide[df_landslide['landslide_category'] == category]
+    triggers = category_df['landslide_trigger'].unique()
+    
+    for trigger in triggers:
+        dataframes_by_category_trigger_year[category][trigger] = {}
+        trigger_df = category_df[category_df['landslide_trigger'] == trigger]
+        years = trigger_df['event_date'].dt.year.unique()
+
+        for year in years:
+            year_df = trigger_df[trigger_df['event_date'].dt.year == year]
+            dataframes_by_category_trigger_year[category][trigger][year] = year_df
+
 
 title = html.H1(children="⛰️ Landslides  Explorer🔎", className="title", style={"margin": "3%"},
 )
@@ -36,6 +54,8 @@ categories = df_landslide["landslide_category"].unique()
 # Create a tab for each category
 tabs = [dcc.Tab(label=category, value=category) for category in categories]
 
+details_tab_title = html.H4(id="details_tab", children="ℹ️ Details", className="detailstab", style={"margin": "3%"})
+details_tab = html.H6(id="details_tab", children="", className="detailstab", style={"margin": "3%"})
 # Create the tabs component
 tablist = dcc.Tabs(
     id="category-tabs",
@@ -89,24 +109,6 @@ tiktok = html.Div(
         ),
     ]
 )
-
-# # Date Picker Range
-# date_picker_label = dbc.Label("Date Range", className="control-label")
-# # doc: https://www.dash-mantine-components.com/components/datepicker
-# date_picker = dmc.DateRangePicker(
-#     id="datepickerrange",
-#     minDate=df_landslide["event_date"].min().date(),
-#     maxDate=df_landslide["event_date"].max().date(),
-#     value=[
-#         pd.to_datetime("2016-01-01").date(),
-#         pd.to_datetime("2016-12-31").date(),
-#     ],
-#     style={"width": "100%", "zIndex": 10},
-#     inputFormat="YYYY",
-#     className="datepicker",
-#     #allowLevelChange = False,
-#     #initialLevel = 'year',
-# )
 
 # Extract years from the dataset
 min_year = df_landslide["event_date"].min().year
@@ -284,6 +286,7 @@ tab_style = {
     'fontWeight': 'bold',
     'font-size': '18px',
     'border': 'none'
+
 }
 tab_selected_style = {
     'margin-left': '4px',
@@ -420,6 +423,8 @@ map_tabs = dbc.Row(
                     ),
                 ]
             ),
+            details_tab_title,
+            details_tab
         ],
         width=12,
     ),
@@ -476,18 +481,27 @@ def update_global_filtered_df(
 ):
     global global_filtered_df
     selected_year = int(date_value)  # Convert the selected year to integer
-    data = df_landslide[df_landslide["event_date"].dt.year == selected_year]
+    
+    # Get all triggers for the selected category if no triggers are selected
+    if not selected_triggers:
+        selected_triggers = list(dataframes_by_category_trigger_year[selected_tab].keys())
 
-    if selected_tab != "all":
-        data = data[data["landslide_category"] == selected_tab]
-    if selected_triggers:
-        if isinstance(selected_triggers, str):
-            selected_triggers = [selected_triggers]
-        data = data[data["landslide_trigger"].isin(selected_triggers)]
+    # If selected_triggers is a string, convert it to a list
+    if isinstance(selected_triggers, str):
+        selected_triggers = [selected_triggers]
+    data = pd.DataFrame()
+    for trigger in selected_triggers:
+        try:
+            temp_df = dataframes_by_category_trigger_year[selected_tab][trigger][selected_year]
+            data = pd.concat([data, temp_df])
+        except Exception as e:
+            print(f"Error while processing trigger '{trigger}': {e}")
+    
     if selected_sizes:
         if isinstance(selected_sizes, str):
             selected_sizes = [selected_sizes]
         data = data[data["landslide_size"].isin(selected_sizes)]
+
     global_filtered_df = data
     global_filtered_df["fatality_count"] = global_filtered_df["fatality_count"].fillna(
         0
@@ -495,6 +509,7 @@ def update_global_filtered_df(
     global_filtered_df["injury_count"] = global_filtered_df["injury_count"].fillna(
         0
     )
+
 
 # Map marker callback
 
@@ -585,6 +600,37 @@ def marker_click(n_clicks, positions, prev_clicks):
         )
         return clicked_marker_idx, n_clicks
     return dash.no_update, prev_clicks
+
+# Add tabs details
+@app.callback(
+    Output("details_tab", "children"),
+    Input("category-tabs", "value"))
+def update_tab_details(selected_tab):
+    if selected_tab == "riverbank_collapse":
+        return "River bank failure can be caused when the gravitational forces acting on a bank exceed the forces which hold the sediment together. Failure depends on sediment type, layering, and moisture content. All river banks experience erosion, but failure is dependent on the location and the rate at which erosion is occurring.[2] River bank failure may be caused by house placement, water saturation, weight on the river bank, vegetation, and/or tectonic activity. When structures are built too close to the bank of the river, their weight may exceed the weight which the bank can hold and cause slumping, or accelerate slumping that may already be active."
+    elif selected_tab == "lahar":
+        return "A lahar (Javanese: ꦮ꧀ꦭꦲꦂ) is a violent type of mudflow or debris flow composed of a slurry of pyroclastic material, rocky debris and water. The material flows down from a volcano, typically along a river valley."
+    elif selected_tab == "complex":
+        return "These are complex landslides which could not be categorized"
+    elif selected_tab == "creep":
+        return "Creep is the slow downslope movement of material under gravity. It generally occurs over large areas. Three types of creep occur: seasonal movement or creep within the soil – due to seasonal changes in soil moisture and temperature, e.g. frost heave processes."
+    elif selected_tab == "translational_slide":
+        return "A translational or planar landslide is a downslope movement of material that occurs along a distinctive planar surface of weakness such as a fault, joint or bedding plane. Some of the largest and most damaging landslides on Earth are translational. These landslides occur at all scales and are not self-stabilising." 
+    elif selected_tab == "topple":
+        return "Topple. This is characterized by the tilting of rock without collapse, or by the forward rotation of rocks about a pivot point. Topples have a rapid rate of movement and failure is generally influenced by the fracture pattern in rock. Material descends by abrupt falling, sliding, bouncing and rolling."
+    elif selected_tab == "landslide":
+        return "A landslide is defined as the movement of a mass of rock, debris, or earth down a slope. Landslides are a type of mass wasting, which denotes any down-slope movement of soil and rock under the direct influence of gravity."
+    elif selected_tab == "mudslide":
+        return "A mudflow, also known as mudslide or mud flow, is a form of mass wasting involving fast-moving flow of debris and dirt that has become liquified by the addition of water. Such flows can move at speeds ranging from 3 meters/minute to 5 meters/second. Mudflows contain a significant proportion of clay, which makes them more fluid than debris flows, allowing them to travel farther and across lower slope angles. Both types of flow are generally mixtures of particles with a wide range of sizes, which typically become sorted by size upon deposition"
+    elif selected_tab == "debris_flow":
+        return "Debris flows are fast-moving landslides that are particularly dangerous to life and property because they move quickly, destroy objects in their paths, and often strike without warning. They occur in a wide variety of environments throughout the world, including all 50 states and U.S. Territories. Debris flows generally occur during periods of intense rainfall or rapid snowmelt and usually start on hillsides or mountains. "
+    elif selected_tab == "snow_avalanche":
+        return "A snow avalanche begins when an unstable mass of snow breaks away from a slope. The snow picks up speed as it moves downhill, producing a river of snow and a cloud of icy particles that rises high into the air. The moving mass picks up even more snow as it rushes downhill."
+    else:  
+        return wikipedia.summary(selected_tab)
+
+
+
 
 
 # Add a callback to update the tweet text
@@ -755,4 +801,4 @@ def update_pie_chart(selected_value, date_value, selected_triggers, selected_siz
 
 if __name__ == "__main__":
     # TODO add back debug=True
-    app.run_server(debug=False)
+    app.run_server(debug=True)
