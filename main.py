@@ -488,25 +488,23 @@ container = dbc.Container(
                         tiktok,
                     ], 
 
-                ),], width=3),
-                dbc.Col([map_tabs], width=6),
+                ),], xs=12, sm=12, md=12, lg=3, xl=3),
+                dbc.Col([map_tabs], xs=12, sm=12, md=12, lg=6, xl=6),
                 dbc.Col(
-    [plots],
-    width=3,
-    style={
-        'height': '90vh',
-        'overflowY': 'scroll',
-        'padding': '0',
-        'padding-right' : '10px',
-        'scrollbarWidth': 'thin',
-        'scrollbarColor': '#000000 #F5F5F5',
-        'scrollbarGutter': '1px solid black',
-        'border-bottom-left-radius':'15px', 
-        'border-bottom-right-radius':'15px'
-    },
-)
-
-
+                    [plots],
+                    xs=12, sm=12, md=12, lg=3, xl=3,
+                    style={
+                        'height': '90vh',
+                        'overflowY': 'scroll',
+                        'padding': '0',
+                        'padding-right' : '10px',
+                        'scrollbarWidth': 'thin',
+                        'scrollbarColor': '#000000 #F5F5F5',
+                        'scrollbarGutter': '1px solid black',
+                        'border-bottom-left-radius':'15px', 
+                        'border-bottom-right-radius':'15px'
+                    },
+                ),
             ]
         ),
         # Add a hidden div for intermediate value storage
@@ -522,6 +520,7 @@ container = dbc.Container(
         "max-height": "100vh"
     },
 )
+
 
 
 
@@ -852,3 +851,4 @@ def update_new_pie_chart(jsonified_global_filtered_df):
 if __name__ == "__main__":
     # TODO add back debug=True
     app.run_server(debug=True)
+
