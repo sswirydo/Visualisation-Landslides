@@ -14,6 +14,9 @@ import functools
 import dash_mantine_components as dmc
 import preprocess
 import wikipedia
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+
 
 app = dash.Dash(
     __name__,
@@ -44,6 +47,9 @@ for category in landslide_categories:
             year_df = trigger_df[trigger_df['event_date'].dt.year == year]
             dataframes_by_category_trigger_year[category][trigger][year] = year_df
 
+
+def pretty_column_name(column_name):
+    return column_name.replace("_", " ").title()
 
 title = html.H1(children="⛰️ Landslides  Explorer🔎", className="title", style={"margin": "3%"},
 )
@@ -151,7 +157,7 @@ landslide_trigger_label = dbc.Label("Landslide Triggers", className="control-lab
 landslide_trigger = dcc.Dropdown(
     id="trigger-dropdown",
     options=[
-        {"label": i, "value": i}
+        {"label": pretty_column_name(i), "value": i}
         for i in df_landslide["landslide_trigger"].dropna().unique()
     ],
     value='downpour', #TODO change plus tard
@@ -165,7 +171,7 @@ landslide_size_label = dbc.Label("Landslide Sizes", className="control-label")
 landslide_size = dcc.Dropdown(
     id="size-dropdown",
     options=[
-        {"label": i, "value": i}
+        {"label": pretty_column_name(i), "value": i}
         for i in df_landslide["landslide_size"].dropna().unique()
     ],
     value=None,
@@ -222,7 +228,18 @@ plots = dbc.Col(
                 dcc.Loading(
                     id="loading-icon-histogram",
                     type="circle",
-                    children=[dcc.Graph(id="histogram", style={'border-bottom-left-radius':'15px', 'border-bottom-right-radius':'15px', 'background-color':'#3E3E3E'})],
+                    children=[dcc.Graph(id="histogram", style={'background-color':'#3E3E3E'})],
+                    style={"textAlign": "center"},
+                )
+            ],
+        ),
+        dbc.Col(
+            [
+                # New pie chart of landslide triggers by year
+                dcc.Loading(
+                    id="loading-icon-histogram",
+                    type="circle",
+                    children=[dcc.Graph(id="new_pie-chart", style={'border-bottom-left-radius':'15px', 'border-bottom-right-radius':'15px', 'background-color':'#3E3E3E'})],
                     style={"textAlign": "center"},
                 )
             ],
@@ -284,10 +301,18 @@ landslide_info = html.Div(
             ],
             id="landslide-info",
             style={
-                "background-color": "white",
+                "background-color": "#303030",
                 "padding": "10px",
                 "border-radius": "5px",
                 "margin": "10px",
+
+
+                'height': '45vh',
+                'overflowY': 'scroll',
+                'scrollbarWidth': 'thin',
+                'scrollbarColor': '#000000 #F5F5F5',
+                'scrollbarGutter': '1px solid black',
+
             },
         )
     ]
@@ -464,7 +489,23 @@ container = dbc.Container(
 
                 ),], width=3),
                 dbc.Col([map_tabs], width=6),
-                dbc.Col([plots], width=3),
+                dbc.Col(
+    [plots],
+    width=3,
+    style={
+        'height': '90vh',
+        'overflowY': 'scroll',
+        'padding': '0',
+        'padding-right' : '10px',
+        'scrollbarWidth': 'thin',
+        'scrollbarColor': '#000000 #F5F5F5',
+        'scrollbarGutter': '1px solid black',
+        'border-bottom-left-radius':'15px', 
+        'border-bottom-right-radius':'15px'
+    },
+)
+
+
             ]
         ),
         # Add a hidden div for intermediate value storage
@@ -542,7 +583,6 @@ def update_figure(
     update_global_filtered_df(
         selected_tab, dates, selected_triggers, selected_sizes
     )
-    print('UPDATE ----')
     return global_filtered_df.to_json(date_format="iso", orient="split")
 
 @app.callback(
@@ -586,9 +626,6 @@ def marker_click(n_clicks, positions, prev_clicks):
             break
     if clicked_marker_idx is not None:
         clicked_position = positions[clicked_marker_idx]
-        print(
-            f"Clicked marker: position={clicked_position}, index={clicked_marker_idx}"
-        )
         return clicked_marker_idx, n_clicks
     return dash.no_update, prev_clicks
 
@@ -654,19 +691,20 @@ def update_landslide_details(clicked_marker_idx):
     img_link = row["photo_link"]
     if img_link != img_link:  # if img_link is NaN
         img_link = "/assets/no_image.gif"
-    show_more = False
-    event_description = html.P(row["event_description"], style={"font-size": 12, "color": "#645a56"})
-    if (len(row["event_description"]) > 300):
-        show_more = dbc.Button("Show More", id="open")
-        event_description = html.P(row["event_description"][:300] + "...", style={"font-size": 12, "color": "#645a56"})
+    #show_more = False
+    event_description = html.P(row["event_description"], style={"font-size": 12, "color": "white"})
+    #if (len(row["event_description"]) > 300):
+    #    show_more = dbc.Button("Show More", id="open")
+    #    event_description = html.P(row["event_description"][:300] + "...", style={"font-size": 12, "color": "#645a56"})
 
     return [
-        html.H1(row["event_title"], style={"font-size": 28, "color": "black"}),
-        html.H2(row['event_date'].strftime("%d %B %Y - %H:%M") + " (" + str(int(row['fatality_count'])) + " fatalities, " + str(int(row['injury_count'])) + " injuries)", style={"font-size": 12, "color": "#645a56"}),
+        html.H1(row["event_title"], style={"font-size": 28, "color": "white"}),
+        html.A("Source Link", href=row["source_link"],target='_blank', style={"color": "cyan", "margin-bottom": "10px"}),
+        html.H2(row['event_date'].strftime("%d %B %Y - %H:%M") + " (" + str(int(row['fatality_count'])) + " fatalities, " + str(int(row['injury_count'])) + " injuries)", style={"font-size": 12, "color": "white"}),
         event_description,
-        show_more,
-        html.P(row["source_link"], style={"font-size": 12, "color": "#645a56"}),
-        html.Img(src=img_link, style={"width": "100%"}),
+        #show_more,
+        html.Img(src=img_link, style={"width": "100%"})
+        
     ]
 
 
@@ -701,15 +739,17 @@ def update_bar_chart(jsonified_global_filtered_df):
             paper_bgcolor='rgba(0,0,0,0)',
         )
     filtered_df['event_date'] = pd.to_datetime(filtered_df['event_date'])
-    filtered_df['month'] = filtered_df['event_date'].dt.to_period('M')
-    monthly_counts = filtered_df.groupby("month").agg({"injury_count": "sum", "fatality_count": "sum"}).reset_index()
+    filtered_df['year'] = filtered_df['event_date'].dt.to_period('Y')
+    yearly_counts = filtered_df.groupby("year").agg({"injury_count": "sum", "fatality_count": "sum"}).reset_index()
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=monthly_counts["month"].astype(str), y=monthly_counts["injury_count"], name="injury_count"))
-    fig.add_trace(go.Bar(x=monthly_counts["month"].astype(str), y=monthly_counts["fatality_count"], name="fatality_count"))
+    fig.add_trace(go.Bar(x=yearly_counts["year"].astype(str), y=yearly_counts["injury_count"], name="Injury count"))
+    fig.add_trace(go.Bar(x=yearly_counts["year"].astype(str), y=yearly_counts["fatality_count"], name="Fatality count"))
     
+    pretty = filtered_df['landslide_category'].apply(pretty_column_name).unique()
+
     fig.update_layout(
-        title=f"Injuries and Fatalities per Month for {filtered_df['landslide_category'].unique()}",
-        xaxis_title="Month",
+        title=f"Injuries and Fatalities per Year for {pretty[0]}",
+        xaxis_title="Year",
         yaxis_title="Number of Injuries and Fatalities",
         font=dict(color="#CFCFCF"),
         plot_bgcolor="#3E3E3E",
@@ -727,49 +767,76 @@ def update_pie_chart(jsonified_global_filtered_df):
     global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
     filtered_df = global_filtered_df
 
-    pie_data = filtered_df["landslide_trigger"].value_counts()
-    fig = px.pie(
-        pie_data,
-        values=pie_data.values,
-        names=pie_data.index,
-        title="Landslide Triggers",
-    )
+    trigger_counts = filtered_df["landslide_trigger"].value_counts().reset_index()
+    trigger_counts.columns = ["landslide_trigger", "count"]
+
+    # Limit to top 5 triggers
+    top_triggers = trigger_counts.head(5)
+    other_count = trigger_counts.iloc[5:]["count"].sum()
+    
+    # Add "Other" to the top_triggers DataFrame
+    other_row = pd.DataFrame({"landslide_trigger": ["Other"], "count": [other_count]})
+    top_triggers = top_triggers.append(other_row, ignore_index=True)
+
+    top_triggers['landslide_trigger'] = top_triggers['landslide_trigger'].apply(pretty_column_name)
+
+    fig = go.Figure(go.Pie(
+        labels=top_triggers["landslide_trigger"],
+        values=top_triggers["count"],
+        textinfo="label+percent",
+        insidetextorientation="radial"
+    ))
+
     fig.update_layout(
-        font=dict(color="#CFCFCF"),  paper_bgcolor='rgba(0,0,0,0)'
+        title="Landslide Triggers",
+        font=dict(color="#CFCFCF"),
+        paper_bgcolor='rgba(0,0,0,0)',
     )
     return fig
 
 
-# Histogram callback
+@app.callback(
+    Output("new_pie-chart", "figure"),
+    Input("intermediate-value", "data")
+)
+def update_new_pie_chart(jsonified_global_filtered_df):
+    global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
+    filtered_df = global_filtered_df
+    if filtered_df.empty:
+        return go.Figure().update_layout(
+            title=f"No data for selected filters",
+            font=dict(color="#CFCFCF"),
+            plot_bgcolor="#3E3E3E",
+            paper_bgcolor='rgba(0,0,0,0)',
+        )
 
+    country_counts = filtered_df["country_name"].value_counts().reset_index()
+    country_counts.columns = ["country_name", "count"]
 
-# @functools.lru_cache(maxsize=32)  # Adjust maxsize according to your needs
-# @app.callback(
-#     Output("histogram", "figure"),
-#     Input("category-tabs", "value"),
-#     Input("datepickerrange", "value"),
-#     Input("trigger-dropdown", "value"),
-#     Input("size-dropdown", "value"),
-# )
-# def update_histogram(selected_value, date_value, selected_triggers, selected_sizes):
-#     update_global_filtered_df(
-#         selected_value, date_value, selected_triggers, selected_sizes
-#     )
-#     global global_filtered_df
-#     filtered_df = global_filtered_df
+    # Limit to top 5 countries
+    top_countries = country_counts.head(5)
+    other_count = country_counts.iloc[5:]["count"].sum()
+    
+    # Add "Other" to the top_countries DataFrame
+    other_row = pd.DataFrame({"country_name": ["Other"], "count": [other_count]})
+    top_countries = top_countries.append(other_row, ignore_index=True)
 
-#     fig = px.histogram(
-#         filtered_df,
-#         x="landslide_trigger",
-#         y="event_date",
-#         nbins=10,
-#         title="Histogram of Landslide Triggers by Year",
-#     )
-#     fig.update_layout(
-#         font=dict(color="#CFCFCF"), plot_bgcolor="#3E3E3E", paper_bgcolor="#3E3E3E"
-#     )
-#     return fig
+    top_countries['country_name'] = top_countries['country_name'].apply(pretty_column_name)
 
+    fig = go.Figure(go.Pie(
+        labels=top_countries["country_name"],
+        values=top_countries["count"],
+        textinfo="label+percent",
+        insidetextorientation="radial"
+    ))
+
+    fig.update_layout(
+        title=f"Landslide Distribution by Country",
+        font=dict(color="#CFCFCF"),
+        plot_bgcolor="#3E3E3E",
+        paper_bgcolor='rgba(0,0,0,0)',
+    )
+    return fig
 
 if __name__ == "__main__":
     # TODO add back debug=True
