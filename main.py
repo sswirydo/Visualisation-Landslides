@@ -158,21 +158,22 @@ landslide_trigger = dcc.Dropdown(
     id="trigger-dropdown",
     options=[
         {"label": pretty_column_name(i), "value": i}
-        for i in df_landslide["landslide_trigger"].dropna().unique()
+        for i in sorted(df_landslide["landslide_trigger"].dropna().unique(), key=lambda x: pretty_column_name(x))
     ],
-    value='downpour', #TODO change plus tard
+    value='downpour', 
     multi=True,
     placeholder="Select Landslide Triggers",
     className="dropdown",
     style={"color": "black", "width": "100%", "zIndex": 8},
 )
+
 # Landslide Size
 landslide_size_label = dbc.Label("Landslide Sizes", className="control-label")
 landslide_size = dcc.Dropdown(
     id="size-dropdown",
     options=[
         {"label": pretty_column_name(i), "value": i}
-        for i in df_landslide["landslide_size"].dropna().unique()
+        for i in sorted(df_landslide["landslide_size"].dropna().unique(), key=lambda x: pretty_column_name(x))
     ],
     value=None,
     multi=True,
@@ -180,6 +181,7 @@ landslide_size = dcc.Dropdown(
     className="dropdown",
     style={"color": "black", "width": "100%", "zIndex": 7},
 )
+
 
 debounce_interval = dcc.Interval(
     id="debounce-interval",
@@ -475,7 +477,6 @@ map_tabs = dbc.Row(
 )
 
 
-
 container = dbc.Container(
     [
         dbc.Row(
@@ -521,6 +522,7 @@ container = dbc.Container(
         "max-height": "100vh"
     },
 )
+
 
 
 app.layout = container
@@ -585,6 +587,14 @@ def update_figure(
     )
     return global_filtered_df.to_json(date_format="iso", orient="split")
 
+
+# emoji_icon = {
+#     "iconUrl": "assets/rain.png",
+#     "iconSize": [32, 32],
+#     "iconAnchor": [16, 16],
+#     "popupAnchor": [0, -16],
+# }
+
 @app.callback(
     Output("markers", "children"),
     Input("intermediate-value", "data"),
@@ -593,6 +603,7 @@ def update_markers(jsonified_global_filtered_df):
     global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
     markers = [
         dl.Marker(
+            #icon = emoji_icon,
             id={"type": "marker", "index": i},
             position=[row["latitude"], row["longitude"]],
             children=[
