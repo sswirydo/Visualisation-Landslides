@@ -1,4 +1,3 @@
-import datetime
 import urllib.parse
 import dash
 import dash_bootstrap_components as dbc
@@ -6,15 +5,11 @@ from dash import dcc
 from dash import html
 import dash_leaflet as dl
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
-import functools
-import dash_mantine_components as dmc
 import preprocess
 import wikipedia
-from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 
@@ -23,8 +18,6 @@ app = dash.Dash(
     title="Landslides",
     external_stylesheets=[dbc.themes.DARKLY, "assets/styles.css"],
 )
-
-print("###### RESTART #######")
 
 df_landslide = pd.read_csv(
     "./data/Global_Landslide_Catalog_Export.csv", parse_dates=["event_date"]
@@ -50,6 +43,8 @@ for category in landslide_categories:
             dataframes_by_category_trigger_year[category][trigger][year] = year_df
 
 
+# Helper functions
+# Rename columns to be more human-readable
 def pretty_column_name(column_name):
     return column_name.replace("_", " ").title()
 
@@ -134,18 +129,7 @@ min_year = df_landslide["event_date"].min().year
 max_year = df_landslide["event_date"].max().year
 years = list(range(min_year, max_year + 1))
 
-# Date Picker
-# date_picker_label = dbc.Label("Select Year", className="control-label")
-# date_picker = dcc.Dropdown(
-#     id="datepickerrange",
-#     options=[{"label": year, "value": year} for year in years],
-#     value=2017,
-#     multi=False,
-#     placeholder="Select a Year",
-#     className="dropdown",
-#     style={"color": "black", "width": "100%", "zIndex": 10},
-# )
-
+# Per Year range picker for dates
 date_picker_label = dbc.Label("Select Year Range", className="control-label")
 date_picker = dcc.RangeSlider(
     id="datepickerrange",
@@ -153,18 +137,17 @@ date_picker = dcc.RangeSlider(
     max=max_year,
     step=1,
     value=[2016, 2017],
-    # marks={year: str(year) for year in range(min_year, max_year + 1)},
     marks={min_year: str(min_year), max_year: str(max_year)},
     className="slider",
     tooltip={"placement": "bottom", "always_visible": True},
 )
 
-
+# Date store, used to store the selected date range
 date_store = dcc.Store(
     id="date-range-storage", data={"start_date": None, "end_date": None}
 )
 
-# Landslide Trigger
+# Landslide Trigger Dropdown
 landslide_trigger_label = dbc.Label("Landslide Triggers", className="control-label")
 landslide_trigger = dcc.Dropdown(
     id="trigger-dropdown",
@@ -182,7 +165,7 @@ landslide_trigger = dcc.Dropdown(
     style={"color": "black", "width": "100%", "zIndex": 8},
 )
 
-# Landslide Size
+# Landslide Size Dropdown
 landslide_size_label = dbc.Label("Landslide Sizes", className="control-label")
 landslide_size = dcc.Dropdown(
     id="size-dropdown",
@@ -200,13 +183,14 @@ landslide_size = dcc.Dropdown(
     style={"color": "black", "width": "100%", "zIndex": 7},
 )
 
-
+# Debounce interval, used to prevent the callback from being fired too often
 debounce_interval = dcc.Interval(
     id="debounce-interval",
     interval=500,  # in milliseconds (500 ms = 0.5 seconds)
     n_intervals=0,
 )
 
+# Data Filters Card, contains the date picker, landslide trigger and size dropdowns
 picker = dbc.Card(
     [
         dbc.CardHeader("Data Filters"),
@@ -229,6 +213,7 @@ picker = dbc.Card(
     className="mb-4",
 )
 
+# Plots, contains the pie charts and histogram
 plots = dbc.Col(
     [
         dbc.Col(
@@ -288,7 +273,7 @@ plots = dbc.Col(
     style={"height": "100vh", "padding-top": "5%", "border-radius": "15px"},
 )
 
-
+# Map, contains the map and the marker cluster
 map = html.Div(
     children=[
         dcc.Loading(
@@ -332,7 +317,7 @@ map = html.Div(
     style={"position": "relative", "transform": "scale(1)"},
 )
 
-
+# Landslide Info, contains the information about the selected landslide
 landslide_info = html.Div(
     children=[
         html.Div(
@@ -352,7 +337,6 @@ landslide_info = html.Div(
         )
     ]
 )
-
 tab_style = {
     "backgroundColor": "black",
     "margin-left": "4px",
@@ -373,6 +357,7 @@ tab_selected_style = {
     "border": "none !important",
 }
 
+# Map Tabs, contains the map category tabs
 map_tabs = dbc.Row(
     dbc.Col(
         [
@@ -494,7 +479,7 @@ map_tabs = dbc.Row(
     # style={"height": "80%"},
 )
 
-
+# Global container, contains all the elements
 container = dbc.Container(
     [
         dbc.Row(
@@ -553,9 +538,10 @@ container = dbc.Container(
     },
 )
 
-
+# Set the app layout
 app.layout = container
 
+# Global filtered dataframe, used to only have to filter the dataframe once
 global_filtered_df = None
 
 
@@ -591,8 +577,6 @@ def update_global_filtered_df(selected_tab, dates, selected_triggers, selected_s
             selected_sizes = [selected_sizes]
         data = data[data["landslide_size"].isin(selected_sizes)]
 
-    # Filter the data based on the start_date and end_date
-    # data = data[(data['event_date'] >= start_date) & (data['event_date'] <= end_date)]
     global_filtered_df = data
     if global_filtered_df is not None and not global_filtered_df.empty:
         global_filtered_df["fatality_count"] = global_filtered_df[
@@ -603,6 +587,7 @@ def update_global_filtered_df(selected_tab, dates, selected_triggers, selected_s
         )
 
 
+# Update the dataframe when the datepicker or dropdowns are changed, store the result in the hidden div
 @app.callback(
     Output("intermediate-value", "data"),
     Input("datepickerrange", "value"),
@@ -615,14 +600,7 @@ def update_figure(dates, selected_triggers, selected_sizes, selected_tab):
     return global_filtered_df.to_json(date_format="iso", orient="split")
 
 
-# emoji_icon = {
-#     "iconUrl": "assets/rain.png",
-#     "iconSize": [32, 32],
-#     "iconAnchor": [16, 16],
-#     "popupAnchor": [0, -16],
-# }
-
-
+# Update the map markers
 @app.callback(
     Output("markers", "children"),
     Input("intermediate-value", "data"),
@@ -644,8 +622,6 @@ def update_markers(jsonified_global_filtered_df):
 
 
 # Marker click callback
-
-
 @app.callback(
     [
         Output("clicked-marker-index", "children"),
@@ -697,8 +673,6 @@ def update_tab_details(selected_tab):
 
 
 # Add a callback to update the tweet text
-
-
 @app.callback(Output("tweet-text", "value"), Input("clicked-marker-index", "children"))
 def update_tweet_text(clicked_marker_idx):
     if (
@@ -715,7 +689,6 @@ def update_tweet_text(clicked_marker_idx):
     return tweet
 
 
-# FIXME: Puts a default value before the user clicks on a marker
 # Callback updates the landslide description
 @app.callback(
     Output("landslide-info", "children"), Input("clicked-marker-index", "children")
@@ -731,9 +704,6 @@ def update_landslide_details(clicked_marker_idx):
     event_description = html.P(
         row["event_description"], style={"font-size": 12, "color": "white"}
     )
-    # if (len(row["event_description"]) > 300):
-    #    show_more = dbc.Button("Show More", id="open")
-    #    event_description = html.P(row["event_description"][:300] + "...", style={"font-size": 12, "color": "#645a56"})
 
     return [
         html.H1(row["event_title"], style={"font-size": 28, "color": "white"}),
@@ -771,8 +741,6 @@ def update_landslide_details(clicked_marker_idx):
 
 
 # Callback updates the twitter share button
-
-
 @app.callback(Output("twitter-share-button", "href"), Input("tweet-text", "value"))
 def update_twitter_share_button(tweet_text):
     tweet_url = "https://twitter.com/intent/tweet?text=" + urllib.parse.quote(
@@ -781,12 +749,14 @@ def update_twitter_share_button(tweet_text):
     return tweet_url
 
 
+# Callback updates the tiktok share button
 @app.callback(Output("tiktok-share-button", "href"), Input("tweet-text", "value"))
 def update_tiktok_share_button(tiktok_text):
     tiktok_url = f"https://www.tiktok.com/share?url={urllib.parse.quote(tiktok_text)}"
     return tiktok_url
 
 
+# Callback updates the histogram
 @app.callback(Output("histogram", "figure"), Input("intermediate-value", "data"))
 def update_bar_chart(jsonified_global_filtered_df):
     global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
@@ -884,6 +854,7 @@ def update_pie_chart(jsonified_global_filtered_df):
     return fig
 
 
+# Second pie chart callback
 @app.callback(Output("new_pie-chart", "figure"), Input("intermediate-value", "data"))
 def update_new_pie_chart(jsonified_global_filtered_df):
     global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
@@ -929,6 +900,6 @@ def update_new_pie_chart(jsonified_global_filtered_df):
     return fig
 
 
+# Main function, runs the dashboard server
 if __name__ == "__main__":
-    # TODO add back debug=True
     app.run_server(debug=False)
