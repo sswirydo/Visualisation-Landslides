@@ -931,4 +931,4 @@ def update_new_pie_chart(jsonified_global_filtered_df):
 
 if __name__ == "__main__":
     # TODO add back debug=True
-    app.run_server(debug=True)
+    app.run_server(debug=False)
