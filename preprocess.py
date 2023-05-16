@@ -2,19 +2,33 @@ import pandas as pd
 import numpy as np
 
 
-
 def preprocess(df_landslide):
-
-    # df_landslide = df_landslide.loc(:, ['source_name', 'event_date', 'event_description', 'latitude', 'longitude', 'country_name', 'location_description', 'landslide_type', 'landslide_size', 'trigger', 'fatality_count', 'injury_count', 'total_affected', 'source_link'])
-
+    df_landslide = df_landslide[
+        [
+            "source_name",
+            "source_link",
+            "event_id",
+            "event_date",
+            "event_description",
+            "event_title",
+            "landslide_category",
+            "landslide_trigger",
+            "landslide_size",
+            "fatality_count",
+            "injury_count",
+            "photo_link",
+            "latitude",
+            "longitude",
+            "country_name",
+        ]
+    ]
     return df_landslide
-
-
 
 
 ###########################
 # OLD ARCHIVE STUFF BELOW #
 ###########################
+
 
 def fix_latitude(lat):
     lat = str(lat).strip()
@@ -39,13 +53,14 @@ def fix_longitude(lon: str) -> float:
 
 
 def calculate_distance(row, latitude, longitude):
-    return np.sqrt((row["latitude"] - latitude) ** 2 + (row["longitude"] - longitude) ** 2)
+    return np.sqrt(
+        (row["latitude"] - latitude) ** 2 + (row["longitude"] - longitude) ** 2
+    )
 
 
 def find_nearest_temperature(df_temperature, longitude, latitude, event_date):
     df_temp_filtered = df_temperature[
-        (df_temperature["event_date"] -
-         event_date).abs() <= pd.Timedelta(days=30)
+        (df_temperature["event_date"] - event_date).abs() <= pd.Timedelta(days=30)
     ]
 
     temp_df = df_temp_filtered.copy()
@@ -62,17 +77,19 @@ def find_nearest_temperature(df_temperature, longitude, latitude, event_date):
         return None
 
     # Calculate distances using a custom function and find the index with the minimum distance
-    idxmin = temp_df.apply(calculate_distance, args=(
-        latitude, longitude), axis=1).idxmin()
+    idxmin = temp_df.apply(
+        calculate_distance, args=(latitude, longitude), axis=1
+    ).idxmin()
 
     return idxmin
 
 
 def get_df():
     # Load data
-    df_landslide = pd.read_csv('./data/Global_Landslide_Catalog_Export.csv')
+    df_landslide = pd.read_csv("./data/Global_Landslide_Catalog_Export.csv")
     df_temperature = pd.read_csv(
-        './data/GlobalLandTemperatures/GlobalLandTemperaturesByMajorCity.csv')
+        "./data/GlobalLandTemperatures/GlobalLandTemperaturesByMajorCity.csv"
+    )
 
     # Pre-process data
     df_landslide["event_date"] = pd.to_datetime(df_landslide["event_date"])
@@ -80,8 +97,7 @@ def get_df():
     df_temperature["latitude"] = df_temperature.Latitude.apply(fix_latitude)
     df_temperature["longitude"] = df_temperature.Longitude.apply(fix_longitude)
     df_temperature = df_temperature.rename(
-        columns={"Latitude": "latitude",
-                 "Longitude": "longitude", "dt": "event_date"}
+        columns={"Latitude": "latitude", "Longitude": "longitude", "dt": "event_date"}
     )
 
     # Find the nearest temperature data for each landslide event

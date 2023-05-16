@@ -594,10 +594,13 @@ def update_global_filtered_df(selected_tab, dates, selected_triggers, selected_s
     # Filter the data based on the start_date and end_date
     # data = data[(data['event_date'] >= start_date) & (data['event_date'] <= end_date)]
     global_filtered_df = data
-    global_filtered_df["fatality_count"] = global_filtered_df["fatality_count"].fillna(
-        0
-    )
-    global_filtered_df["injury_count"] = global_filtered_df["injury_count"].fillna(0)
+    if global_filtered_df is not None and not global_filtered_df.empty:
+        global_filtered_df["fatality_count"] = global_filtered_df[
+            "fatality_count"
+        ].fillna(0)
+        global_filtered_df["injury_count"] = global_filtered_df["injury_count"].fillna(
+            0
+        )
 
 
 @app.callback(
@@ -840,6 +843,14 @@ def update_bar_chart(jsonified_global_filtered_df):
 def update_pie_chart(jsonified_global_filtered_df):
     global_filtered_df = pd.read_json(jsonified_global_filtered_df, orient="split")
     filtered_df = global_filtered_df
+
+    if filtered_df.empty:
+        return go.Figure().update_layout(
+            title=f"No data for selected filters",
+            font=dict(color="#CFCFCF"),
+            plot_bgcolor="#3E3E3E",
+            paper_bgcolor="rgba(0,0,0,0)",
+        )
 
     trigger_counts = filtered_df["landslide_trigger"].value_counts().reset_index()
     trigger_counts.columns = ["landslide_trigger", "count"]
