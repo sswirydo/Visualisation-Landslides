@@ -8,5 +8,5 @@ dash-leaflet >= 0.1.23
 # Maybe
 pypsa >= 0.22.1
 dash_mantine_components >= 0.12.1
-
+wikipedia >= 1.4.0
 
