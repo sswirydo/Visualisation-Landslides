@@ -62,7 +62,7 @@ categories = df_landslide["landslide_category"].unique()
 tabs = [dcc.Tab(label=category, value=category) for category in categories]
 
 details_tab_title = html.H4(
-    id="details_tab",
+    id="details_tab_title",
     children="ℹ️ Did you know?",
     className="detailstab",
     style={"margin": "3%"},
