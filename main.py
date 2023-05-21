@@ -240,7 +240,7 @@ plots = dbc.Col(
             [
                 # Histogram of landslide triggers by year
                 dcc.Loading(
-                    id="loading-icon-histogram",
+                    id="loading-icon-histogram-1",
                     type="circle",
                     children=[
                         dcc.Graph(id="histogram", style={"background-color": "#3E3E3E"})
@@ -253,7 +253,7 @@ plots = dbc.Col(
             [
                 # New pie chart of landslide triggers by year
                 dcc.Loading(
-                    id="loading-icon-histogram",
+                    id="loading-icon-histogram-2",
                     type="circle",
                     children=[
                         dcc.Graph(
@@ -640,7 +640,7 @@ def marker_click(n_clicks, positions, prev_clicks):
             clicked_marker_idx = i
             break
     if clicked_marker_idx is not None:
-        clicked_position = positions[clicked_marker_idx]
+        # clicked_position = positions[clicked_marker_idx]
         return clicked_marker_idx, n_clicks
     return dash.no_update, prev_clicks
 
