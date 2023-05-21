@@ -831,7 +831,7 @@ def update_pie_chart(jsonified_global_filtered_df):
 
     # Add "Other" to the top_triggers DataFrame
     other_row = pd.DataFrame({"landslide_trigger": ["Other"], "count": [other_count]})
-    top_triggers = top_triggers.append(other_row, ignore_index=True)
+    top_triggers = pd.concat([top_triggers, other_row], ignore_index=True)
 
     top_triggers["landslide_trigger"] = top_triggers["landslide_trigger"].apply(
         pretty_column_name
@@ -876,7 +876,7 @@ def update_new_pie_chart(jsonified_global_filtered_df):
 
     # Add "Other" to the top_countries DataFrame
     other_row = pd.DataFrame({"country_name": ["Other"], "count": [other_count]})
-    top_countries = top_countries.append(other_row, ignore_index=True)
+    top_countries = pd.concat([top_countries, other_row], ignore_index=True)
 
     top_countries["country_name"] = top_countries["country_name"].apply(
         pretty_column_name
