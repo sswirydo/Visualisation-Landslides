@@ -170,23 +170,29 @@ landslide_trigger = dcc.Dropdown(
     style={"color": "black", "width": "100%", "zIndex": 8},
 )
 
-# Landslide Size Dropdown
+manual_order = ["unknown", "small", "medium", "large", "very_large", "catastrophic"]
+
+# Sort the dropdown options based on the manual order
+options = [
+    {"label": pretty_column_name(i), "value": i}
+    for i in sorted(
+        df_landslide["landslide_size"].dropna().unique(),
+        key=lambda x: manual_order.index(x) if x in manual_order else float("inf"),
+    )
+]
 landslide_size_label = dbc.Label("Landslide Sizes", className="control-label")
+
+# Create the dropdown with the sorted options
 landslide_size = dcc.Dropdown(
     id="size-dropdown",
-    options=[
-        {"label": pretty_column_name(i), "value": i}
-        for i in sorted(
-            df_landslide["landslide_size"].dropna().unique(),
-            key=lambda x: pretty_column_name(x),
-        )
-    ],
+    options=options,
     value=None,
     multi=True,
     placeholder="Select Landslide Sizes",
     className="dropdown",
     style={"color": "black", "width": "100%", "zIndex": 7},
 )
+
 
 # Debounce interval, used to prevent the callback from being fired too often
 debounce_interval = dcc.Interval(
