@@ -691,7 +691,7 @@ def update_tweet_text(clicked_marker_idx):
     event_title = row["event_title"]
     source_name = row["source_name"]
     event_date = row["event_date"].strftime("%Y-%m-%d")
-    tweet = f"{event_title} on {event_date} by {source_name}. #landslides #Info-Vis"
+    tweet = f"{event_title} on {event_date} by {source_name}. #landslides #InfoVis"
     return tweet
 
 
