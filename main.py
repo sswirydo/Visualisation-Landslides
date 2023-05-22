@@ -78,7 +78,7 @@ tablist = dcc.Tabs(
 )
 
 # Twitter
-twitter = html.Div(
+twitter_input = html.Div(
     children=[
         dcc.Input(
             id="tweet-text",
@@ -87,6 +87,11 @@ twitter = html.Div(
             value="[message] #landslides #Info-Vis",
             style={"width": "100%", "zIndex": 10},
         ),
+    ]
+)
+
+twitter_btn = html.Div(
+    children=[
         dcc.Link(
             "Share on Twitter 🐦",
             id="twitter-share-button",
@@ -97,27 +102,27 @@ twitter = html.Div(
                 "text-decoration": "none",
                 "font-size": "20px",
                 "padding": "10px",
-                "float": "left",
+                "float": "right",
                 "margin": "auto",
             },
         ),
     ]
 )
 
-# TikTok
-tiktok = html.Div(
+# Dataset source
+dataset_btn = html.Div(
     children=[
         dcc.Link(
-            "Share on TikTok 🎵",
-            id="tiktok-share-button",
-            href="https://www.tiktok.com/",
+            "Dataset 🌐",
+            id="dataset-source-button",
+            href="https://data.nasa.gov/Earth-Science/Global-Landslide-Catalog-Export/dd9e-wu2v",
             target="_blank",
             style={
                 "color": "white",
                 "text-decoration": "none",
                 "font-size": "20px",
                 "padding": "10px",
-                "float": "right",
+                "float": "left",
                 "margin": "auto",
             },
         ),
@@ -490,8 +495,9 @@ container = dbc.Container(
                         landslide_info,
                         html.Div(
                             [
-                                twitter,
-                                tiktok,
+                                twitter_input,
+                                dataset_btn,
+                                twitter_btn,
                             ],
                         ),
                     ],
@@ -748,12 +754,6 @@ def update_twitter_share_button(tweet_text):
     )
     return tweet_url
 
-
-# Callback updates the tiktok share button
-@app.callback(Output("tiktok-share-button", "href"), Input("tweet-text", "value"))
-def update_tiktok_share_button(tiktok_text):
-    tiktok_url = f"https://www.tiktok.com/share?url={urllib.parse.quote(tiktok_text)}"
-    return tiktok_url
 
 
 # Callback updates the histogram
