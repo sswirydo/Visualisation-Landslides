@@ -8,10 +8,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from dash.dependencies import Input, Output, State, ALL
 from dash.exceptions import PreventUpdate
-import preprocess
 import wikipedia
 import plotly.graph_objects as go
-
 
 app = dash.Dash(
     __name__,
@@ -24,7 +22,25 @@ df_landslide = pd.read_csv(
 )
 
 # Preprocess dataframes
-df_landslide = preprocess.preprocess(df_landslide)
+df_landslide = df_landslide[
+    [
+        "source_name",
+        "source_link",
+        "event_id",
+        "event_date",
+        "event_description",
+        "event_title",
+        "landslide_category",
+        "landslide_trigger",
+        "landslide_size",
+        "fatality_count",
+        "injury_count",
+        "photo_link",
+        "latitude",
+        "longitude",
+        "country_name",
+    ]
+]
 landslide_categories = df_landslide["landslide_category"].unique()
 dataframes_by_category_trigger_year = {}
 
